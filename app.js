@@ -47,7 +47,7 @@ function freshState() {
 let state = freshState();
 const ui = { view: 'dash', fStore: 'all', fPerson: 'all', storeType: 'all', storeQuery: '' };
 
-const save = () => DB.set('state', state).catch((e) => toast('Speichern fehlgeschlagen: ' + e));
+const save = () => { DB.set('state', state).catch((e) => toast('Speichern fehlgeschlagen: ' + e)); Sync.push(); };
 
 // Übernimmt Daten aus Version 1 (eine Liste, ein Laden)
 function migrate(old) {
@@ -122,6 +122,12 @@ function avatar(m, size = '') {
   return `<span class="av ${size}" style="--c:${m.color}" title="${esc(m.name)}">${esc(m.name.trim()[0] || '?').toUpperCase()}</span>`;
 }
 
+function syncPill() {
+  const st = Sync.status;
+  const txt = { off: 'Nur auf diesem Gerät', connecting: 'Verbinde …', on: 'Gemeinsam · synchron', offline: 'Offline · wird später abgeglichen', error: 'Abgleich gestört' }[st];
+  return `<button class="sync-pill ${st}" data-act="goto" data-view="settings" title="${esc(Sync.error || txt)}"><i></i>${txt}</button>`;
+}
+
 function toast(msg, action) {
   const t = $('#toast');
   t.innerHTML = `<span>${esc(msg)}</span>` + (action ? `<button>${esc(action.label)}</button>` : '');
@@ -131,7 +137,7 @@ function toast(msg, action) {
   clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), action ? 6000 : 2200);
 }
 
-function shrinkImage(file, max = 1000) {
+function shrinkImage(file, max = 800) {
   return new Promise((res, rej) => {
     const img = new Image(), url = URL.createObjectURL(file);
     img.onload = () => {
@@ -139,7 +145,7 @@ function shrinkImage(file, max = 1000) {
       const c = document.createElement('canvas');
       c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.78));
+      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.72));
     };
     img.onerror = rej; img.src = url;
   });
@@ -227,7 +233,7 @@ function renderDash() {
   $('#view-dash').innerHTML = `
     <header class="page-head">
       <div><p class="eyebrow">${new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-      <h1>${hello}${me ? ', ' + esc(me.name) : ''}</h1></div>
+      <h1>${hello}${me ? ', ' + esc(me.name) : ''}</h1>${syncPill()}</div>
       <button class="who-me" data-act="switch-me" title="Wer bist du?">${avatar(me, 'lg')}</button>
     </header>
     ${quickAdd()}
@@ -368,6 +374,8 @@ function renderPeople() {
 function renderSettings() {
   $('#view-settings').innerHTML = `
     <header class="page-head"><div><p class="eyebrow">Einstellungen</p><h1>Mehr</h1></div></header>
+    <h2 class="sec">Gemeinsam nutzen</h2>
+    ${syncSection()}
     <h2 class="sec">Abteilungen <button class="link" data-act="new-cat">+ Neu</button></h2>
     <p class="muted small">Hier legt ihr fest, welche Abteilungen es gibt. Die Reihenfolge pro Laden stellt ihr beim Laden unter „Laufweg“ ein.</p>
     <div class="card list-card">${state.categories.map((c) => `<div class="srow">
@@ -468,6 +476,68 @@ function editOffer(o) {
     }
     save(); render();
   });
+}
+
+function syncSection() {
+  if (!Sync.hasConfig) return `<div class="card pad stack">
+      <p class="muted">Damit ihr beide dieselbe Liste live auf euren Handys habt, braucht die App ein kostenloses
+        Firebase-Projekt (einmalig ca. 5 Minuten, Anleitung: <a href="FIREBASE.md" target="_blank" rel="noopener">FIREBASE.md</a>).
+        Danach hier die Konfiguration aus der Firebase-Konsole einfügen.</p>
+      <textarea id="fb-config" rows="6" placeholder='const firebaseConfig = {\n  apiKey: "AIza…",\n  authDomain: "…",\n  projectId: "…",\n  appId: "…"\n};'></textarea>
+      <button class="btn primary" data-act="sync-config">Konfiguration speichern</button>
+    </div>`;
+  if (!Sync.code) return `<div class="card pad stack">
+      ${syncPill()}
+      <p class="muted">Firebase ist eingerichtet. Startet jetzt einen gemeinsamen Haushalt – oder tretet mit dem Code
+        des anderen Handys bei.</p>
+      <button class="btn primary" data-act="sync-create">Gemeinsamen Haushalt starten</button>
+      <div class="row wide"><input id="join-code" placeholder="Code, z. B. ABCD-EFGH-…" autocapitalize="characters">
+        <button class="btn" data-act="sync-join">Beitreten</button></div>
+      ${Sync.configFromFile ? '' : '<button class="link" data-act="sync-forget">Firebase-Konfiguration entfernen</button>'}
+    </div>`;
+  return `<div class="card pad stack">
+      ${syncPill()}
+      ${Sync.status === 'error' ? `<p class="err">${esc(Sync.error)}</p>` : ''}
+      <p class="muted">Alle Änderungen erscheinen sofort auf allen verbundenen Handys. Ohne Netz geht alles weiter und wird
+        später abgeglichen.</p>
+      <div><p class="eyebrow">Haushalts-Code</p><p class="code">${esc(Sync.fmtCode)}</p></div>
+      <button class="btn primary" data-act="sync-share">Einladung teilen</button>
+      <p class="muted small" style="margin:0">Der Code ist wie ein Schlüssel: Wer ihn hat, sieht und ändert eure Liste. Nur an Familie weitergeben.</p>
+      <button class="link danger" data-act="sync-leave">Auf diesem Gerät trennen</button>
+    </div>`;
+}
+
+async function runSync(label, fn) {
+  toast(label + ' …');
+  try { await fn(); render(); return true; }
+  catch (e) { render(); toast('Fehler: ' + (e.message || e)); return false; }
+}
+
+function askWhoAmI() {
+  if (!state.members.length) return;
+  dialog(`<h3>Wer bist du?</h3><p class="muted">Damit die App weiß, wer auf diesem Handy einkauft.</p>
+    <div class="stack">${state.members.map((m) => `<button value="${m.id}" class="osm-row">${avatar(m, 'lg')}<span class="txt"><b>${esc(m.name)}</b></span></button>`).join('')}</div>
+    <menu><span></span><button value="" class="btn ghost">Später</button></menu>`, (v) => {
+    if (v && member(v)) { state.me = v; DB.set('state', state); toast(`Hallo ${member(v).name}!`); }
+    render();
+  });
+}
+
+async function handleJoinLink() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  const code = h.get('join');
+  if (!code) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  let conf = null;
+  if (h.get('cfg')) { try { conf = JSON.parse(decodeURIComponent(escape(atob(h.get('cfg'))))); } catch { } }
+  if (!conf && !Sync.hasConfig) return toast('Einladung ungültig: Firebase-Konfiguration fehlt.');
+  if (Sync.code === code.toLowerCase()) return toast('Schon verbunden ✓');
+  const local = state.items.length;
+  if (!confirm(`Der gemeinsamen Einkaufsliste beitreten?${local ? `\n\nDie ${local} Artikel auf diesem Gerät werden durch die gemeinsame Liste ersetzt.` : ''}`)) return;
+  if (await runSync('Verbinde', () => Sync.join(code, conf))) {
+    toast('Verbunden ✓');
+    setTimeout(askWhoAmI, 1200);
+  }
 }
 
 // ================= Dialoge =================
@@ -741,7 +811,34 @@ document.addEventListener('click', async (e) => {
       inp.click();
       break;
     }
-    case 'reset': if (confirm('Wirklich alles löschen und neu anfangen?')) { state = freshState(); save(); render(); } break;
+    case 'reset': if (confirm(Sync.code ? 'Wirklich alles löschen? Das löscht die Liste auch auf allen verbundenen Handys!' : 'Wirklich alles löschen und neu anfangen?')) { const me = state.me; state = freshState(); if (Sync.code) state.me = me; save(); render(); } break;
+    case 'sync-config':
+      try { await Sync.saveConfig($('#fb-config').value); toast('Firebase eingerichtet ✓'); render(); }
+      catch (err) { toast('Das sieht nicht nach einer Firebase-Konfiguration aus: ' + err.message); }
+      break;
+    case 'sync-forget': await Sync.disconnect(true); render(); break;
+    case 'sync-create':
+      if (await runSync('Haushalt wird angelegt', () => Sync.create())) toast('Gemeinsamer Haushalt gestartet ✓ Jetzt die Einladung teilen.');
+      break;
+    case 'sync-join': {
+      const code = $('#join-code').value.trim();
+      if (!code) return toast('Bitte den Code eingeben');
+      if (state.items.length && !confirm('Die Liste auf diesem Gerät wird durch die gemeinsame Liste ersetzt. Weiter?')) return;
+      if (await runSync('Verbinde', () => Sync.join(code))) { toast('Verbunden ✓'); setTimeout(askWhoAmI, 1200); }
+      break;
+    }
+    case 'sync-share': {
+      const url = Sync.inviteLink();
+      const text = 'Komm in unsere gemeinsame Einkaufsliste:';
+      try {
+        if (navigator.share) await navigator.share({ title: 'Einkauf', text, url });
+        else { await navigator.clipboard.writeText(url); toast('Einladungslink kopiert ✓'); }
+      } catch (err) { if (err.name !== 'AbortError') prompt('Diesen Link schicken:', url); }
+      break;
+    }
+    case 'sync-leave':
+      if (confirm('Dieses Gerät vom gemeinsamen Haushalt trennen? Die Liste bleibt hier als Kopie erhalten.')) { await Sync.disconnect(); render(); toast('Getrennt'); }
+      break;
   }
 });
 
@@ -757,5 +854,9 @@ function go(view) { ui.view = view; render(); window.scrollTo({ top: 0 }); }
 (async () => {
   try { const saved = await DB.get('state'); if (saved) state = migrate(saved); } catch (e) { console.warn(e); }
   render();
+  await Sync.init();
+  document.addEventListener('sync-status', () => { if (ui.view === 'dash' || ui.view === 'settings') render(); });
+  handleJoinLink();
+  window.addEventListener('hashchange', handleJoinLink);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

@@ -26,6 +26,11 @@ Korrekturen merkt sich die App. 📷 fügt einen Artikel mit Foto hinzu.
 Lokal: `python3 -m http.server` und `http://localhost:8000` öffnen. Fürs Handy z. B. über GitHub Pages veröffentlichen
 und „Zum Home-Bildschirm“ hinzufügen.
 
+## Gemeinsam nutzen (Abgleich zwischen Handys)
+Über Firebase (kostenlos): einmal einrichten, dann per **Einladungslink** beitreten. Änderungen erscheinen sofort auf
+allen Handys, offline geht alles weiter und wird später abgeglichen. Anleitung: **[FIREBASE.md](FIREBASE.md)**.
+Die Firebase-Bibliothek liegt in `vendor/firebase.js` (Firebase JS SDK 10.14.1, Apache-2.0) und wird nur geladen,
+wenn der Abgleich eingerichtet ist.
+
 ## Hinweis
-Die Daten liegen derzeit auf dem jeweiligen Gerät. Der gemeinsame Abgleich zwischen mehreren Handys ist der nächste Schritt.
 Die Ladenadressen stammen aus öffentlichen Verzeichnissen und OpenStreetMap und können veraltet sein.

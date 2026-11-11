@@ -201,3 +201,24 @@ dialog.photo{padding:10px;text-align:center}
 #toast button{flex:none;background:var(--bg);color:var(--fg);border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px}
 #toast.deal-toast{background:var(--deal);color:#fff;pointer-events:auto}
 #toast.show{pointer-events:auto}
+
+/* ---- Abgleich ---- */
+.sync-pill{display:inline-flex;align-items:center;gap:7px;margin-top:8px;font-size:12px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px 4px 9px;align-self:flex-start}
+.sync-pill i{width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.5}
+.sync-pill.on i{background:#6f9a5b;opacity:1;box-shadow:0 0 0 3px color-mix(in srgb,#6f9a5b 25%,transparent)}
+.sync-pill.connecting i{background:var(--accent);opacity:1;animation:blink 1s infinite}
+.sync-pill.offline i{background:#c49a3d;opacity:1}
+.sync-pill.error i{background:var(--danger);opacity:1}
+.sync-pill.error{color:var(--danger)}
+@keyframes blink{50%{opacity:.3}}
+textarea{font:13px/1.4 ui-monospace,Menlo,monospace;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;width:100%;resize:vertical}
+textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.stack .row.wide{width:100%;display:flex;gap:8px}
+.stack>.muted{margin:0}
+.stack a{color:var(--accent-d)}
+.code{font:700 20px/1.3 ui-monospace,Menlo,monospace;letter-spacing:.04em;margin:2px 0 0;word-break:break-all}
+.err{color:var(--danger);margin:0;font-size:14px}
+.link.danger{color:var(--danger)}
+.stack .osm-row{width:100%}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:focus:not(:focus-visible){outline:none}

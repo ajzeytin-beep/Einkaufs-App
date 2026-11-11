@@ -1,0 +1,17 @@
+rules_version = '2';
+// Sicherheitsregeln für den gemeinsamen Abgleich.
+// Zugriff nur mit (anonymer) Anmeldung und nur, wer den geheimen Haushalts-Code kennt.
+// Eine Liste aller Haushalte kann niemand abrufen.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /households/{hid} {
+      allow get, create, update: if request.auth != null && hid.size() >= 20;
+      allow delete, list: if false;
+
+      match /{col}/{docId} {
+        allow read, write: if request.auth != null && hid.size() >= 20
+          && col in ['items', 'members', 'stores', 'offers', 'categories'];
+      }
+    }
+  }
+}

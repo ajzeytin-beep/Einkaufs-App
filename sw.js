@@ -1,4 +1,4 @@
-const C = 'einkauf-v2';
+const C = 'einkauf-v3';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'categories.js', 'stores.js', 'manifest.json', 'icon.svg'];
 self.addEventListener('install', (e) => e.waitUntil(caches.open(C).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())));

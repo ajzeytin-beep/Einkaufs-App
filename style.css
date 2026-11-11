@@ -120,7 +120,8 @@ h3{margin:0;font-size:16px;font-weight:650}
 .more{width:34px;height:34px;border-radius:50%;color:var(--muted);font-size:20px;flex:none}
 .more:hover,.who:hover{background:var(--accent-soft)}
 .who{border-radius:50%;padding:3px}
-.star{color:var(--line);flex:none}
+.star{color:color-mix(in srgb,var(--muted) 55%,transparent);flex:none;width:36px;height:36px;margin-left:-6px;border-radius:50%;display:grid;place-items:center;transition:transform .15s}
+.star:active{transform:scale(1.25)}
 .star svg{width:22px;height:22px}
 .star.on{color:#d0a253}.star.on svg{fill:currentColor}
 .srow>.av.lg{margin-left:-4px}
@@ -169,3 +170,16 @@ dialog.photo{padding:10px;text-align:center}
 #toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--fg);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:50;max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media (min-width:900px){#toast{bottom:30px;left:calc(50% + 116px)}}
+.store-card{position:relative}
+.fav-mark{position:absolute;top:12px;right:12px;color:#d0a253}
+.fav-mark svg{width:16px;height:16px;fill:currentColor}
+.hint-card{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-top:16px}
+.hint-card p{margin:0;font-size:14px;color:var(--muted)}
+.hint-card .sicon{color:#d0a253}
+.switch{flex-direction:row!important;align-items:center;gap:12px!important;cursor:pointer;color:var(--fg)!important;font-size:15px!important}
+.switch input{position:absolute;opacity:0}
+.knob{width:46px;height:28px;border-radius:999px;background:var(--line);position:relative;transition:background .2s;flex:none}
+.knob::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
+.switch input:checked+.knob{background:var(--accent)}
+.switch input:checked+.knob::after{transform:translateX(18px)}
+.switch input:focus-visible+.knob{box-shadow:0 0 0 4px var(--accent-soft)}

@@ -7,7 +7,7 @@ Design: warmes Beige/Braun, hell und dunkel.
 - **Übersicht (Dashboard):** offene Artikel, im Wagen, Fortschritt; „Wer kauft was“ pro Person; „Wo einkaufen“ pro Laden; zuletzt hinzugefügt.
 - **Liste:** nach Laden gruppiert und innerhalb des Ladens nach dessen **Laufweg** (Eingang → Kasse) sortiert.
   Filter nach Laden und Person. Antippen = abhaken. Antippen des Personen-Kreises = wechselt, wer es kauft.
-- **Läden:** Startliste mit Supermärkten, Discountern und Drogerien in Emden. Suchen, Favoriten (★), anlegen, bearbeiten, löschen.
+- **Läden:** Startliste mit Supermärkten, Discountern und Drogerien in Emden. Suchen, Lieblingsläden per Stern ★ (stehen oben, in der Übersicht und in der Ladenauswahl), anlegen, bearbeiten, löschen.
   „Läden in Emden suchen“ lädt weitere Geschäfte live aus OpenStreetMap (Baumarkt, Mode, Bäcker, Elektronik …).
   Jeder Laden hat seinen eigenen Laufweg (⋯ → Reihenfolge der Abteilungen mit ▲/▼).
 - **Personen:** hinzufügen, umbenennen, Farbe wählen, entfernen. „Das bin ich“ pro Gerät einstellen.

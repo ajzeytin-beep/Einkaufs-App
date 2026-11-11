@@ -167,6 +167,10 @@ function renderDash() {
   const hello = hour < 11 ? 'Guten Morgen' : hour < 18 ? 'Hallo' : 'Guten Abend';
   const storesWith = state.stores.filter((s) => open.some((i) => i.storeId === s.id));
   const unassigned = open.filter((i) => !i.who);
+  // Läden mit offenen Artikeln + Lieblingsläden; Favoriten zuerst, dann nach Anzahl
+  const dashStores = state.stores.filter((s) => s.fav || open.some((i) => i.storeId === s.id))
+    .map((s) => ({ s, n: open.filter((i) => i.storeId === s.id).length }))
+    .sort((a, b) => (b.n > 0) - (a.n > 0) || b.s.fav - a.s.fav || b.n - a.n || a.s.name.localeCompare(b.s.name)).map((x) => x.s);
   const pct = state.items.length ? Math.round((done.length / state.items.length) * 100) : 0;
 
   const personCard = (m, items) => `<button class="card person-card" data-act="goto-person" data-id="${m ? m.id : 'none'}">
@@ -192,11 +196,11 @@ function renderDash() {
     <div class="grid">${state.members.map((m) => personCard(m, open.filter((i) => i.who === m.id))).join('')}
       ${unassigned.length ? personCard(null, unassigned) : ''}</div>
 
-    <h2 class="sec">Wo einkaufen <button class="link" data-act="goto" data-view="stores">Alle Läden</button></h2>
+    <h2 class="sec">Meine Läden <button class="link" data-act="goto" data-view="stores">Alle Läden</button></h2>
     <div class="grid stores-grid">
-      ${storesWith.map((s) => storeCard(s, open.filter((i) => i.storeId === s.id).length)).join('')}
+      ${dashStores.map((s) => storeCard(s, open.filter((i) => i.storeId === s.id).length)).join('')}
       ${open.some((i) => !i.storeId) ? `<button class="card store-card" data-act="goto-store" data-id="none"><span class="sicon">✳︎</span><div><h3>Egal wo</h3><p class="muted">${open.filter((i) => !i.storeId).length} Artikel ohne Laden</p></div></button>` : ''}
-      ${!storesWith.length ? state.stores.filter((s) => s.fav).slice(0, 4).map((s) => storeCard(s, 0)).join('') : ''}
+      ${!dashStores.length ? `<button class="card store-card" data-act="goto" data-view="stores"><span class="sicon">★</span><div><h3>Lieblingsläden wählen</h3><p class="muted">Bei „Läden“ den Stern antippen</p></div></button>` : ''}
     </div>
 
     ${open.length ? `<h2 class="sec">Zuletzt hinzugefügt</h2><div class="card list-card">${open.slice(0, 5).map((i) => itemRow(i, { showStore: true })).join('')}</div>` :
@@ -208,6 +212,7 @@ function storeCard(s, n) {
   return `<button class="card store-card" data-act="goto-store" data-id="${s.id}">
     <span class="sicon">${stype(s.type).icon}</span>
     <div><h3>${esc(s.name)}</h3><p class="muted">${n ? `<b>${n}</b> offen` : esc(s.address || stype(s.type).name)}</p></div>
+    ${s.fav ? `<span class="fav-mark">${ICON.star}</span>` : ''}
   </button>`;
 }
 
@@ -218,7 +223,7 @@ function renderList() {
   const items = state.items.filter((i) => matchP(i) && matchS(i));
   const open = items.filter((i) => !i.done), done = items.filter((i) => i.done);
 
-  const storeChips = [{ id: 'all', label: 'Alle Läden' }, ...state.stores.filter((s) => s.fav || state.items.some((i) => i.storeId === s.id) || ui.fStore === s.id).map((s) => ({ id: s.id, label: `${stype(s.type).icon} ${s.name}` })), { id: 'none', label: 'Egal wo' }];
+  const storeChips = [{ id: 'all', label: 'Alle Läden' }, ...state.stores.filter((s) => s.fav || state.items.some((i) => i.storeId === s.id) || ui.fStore === s.id).sort((a, b) => b.fav - a.fav).map((s) => ({ id: s.id, label: `${s.fav ? '★' : stype(s.type).icon} ${s.name}` })), { id: 'none', label: 'Egal wo' }];
   const personChips = [{ id: 'all', label: 'Alle' }, ...state.members.map((m) => ({ id: m.id, label: m.name, m })), { id: 'none', label: 'Offen' }];
 
   const groupByCat = (list, route) => route.map((cid, idx) => {
@@ -258,11 +263,17 @@ function renderStores() {
   const list = state.stores.filter((s) => (ui.storeType === 'all' || s.type === ui.storeType || (ui.storeType === 'fav' && s.fav)) &&
     (!q || (s.name + ' ' + (s.address || '')).toLowerCase().includes(q)));
   const types = STORE_TYPES.filter((t) => state.stores.some((s) => s.type === t.id));
-  const byType = types.map((t) => ({ t, list: list.filter((s) => s.type === t.id) })).filter((g) => g.list.length);
+  const showFavBlock = ui.storeType === 'all' && !q;
+  const favs = state.stores.filter((s) => s.fav);
+  const rest = showFavBlock ? list.filter((s) => !s.fav) : list;
+  const byType = [
+    ...(showFavBlock && favs.length ? [{ t: { icon: '★', name: 'Meine Lieblingsläden' }, list: favs }] : []),
+    ...types.map((t) => ({ t, list: rest.filter((s) => s.type === t.id) })),
+  ].filter((g) => g.list.length);
   const open = openItems();
 
   $('#view-stores').innerHTML = `
-    <header class="page-head"><div><p class="eyebrow">${state.stores.length} Läden in Emden</p><h1>Läden</h1></div>
+    <header class="page-head"><div><p class="eyebrow">${state.stores.length} Läden · ${state.stores.filter((s) => s.fav).length} Favoriten</p><h1>Läden</h1></div>
       <button class="btn primary" data-act="new-store">${ICON.plus} Laden</button></header>
     <div class="toolbar">
       <input class="search" placeholder="Laden suchen …" value="${esc(ui.storeQuery)}" data-input="storeQuery">
@@ -273,15 +284,17 @@ function renderStores() {
       <button class="chip ${ui.storeType === 'fav' ? 'on' : ''}" data-val="fav">★ Favoriten</button>
       ${types.map((t) => `<button class="chip ${ui.storeType === t.id ? 'on' : ''}" data-val="${t.id}">${t.icon} ${t.name}</button>`).join('')}
     </div>
+    ${!favs.length && showFavBlock ? `<div class="card hint-card"><span class="sicon sm">★</span><p>Tippe den Stern vor einem Laden an, um ihn zu favorisieren. Lieblingsläden stehen dann ganz oben und in der Übersicht.</p></div>` : ''}
+    ${ui.storeType === 'fav' && !list.length ? `<div class="empty card"><p class="muted">Noch keine Lieblingsläden. Tippe bei einem Laden auf den Stern ★.</p></div>` : ''}
     ${byType.map((g) => `<h2 class="sec">${g.t.icon} ${g.t.name}</h2><div class="card list-card">${g.list.map((s) => {
       const n = open.filter((i) => i.storeId === s.id).length;
       return `<div class="srow" data-store="${s.id}">
         <button class="star ${s.fav ? 'on' : ''}" data-act="fav" aria-label="Favorit">${ICON.star}</button>
-        <div class="txt" data-act="goto-store" data-id="${s.id}"><span class="name">${esc(s.name)}</span><span class="meta">${esc(s.address || '')}</span></div>
+        <div class="txt" data-act="goto-store" data-id="${s.id}"><span class="name">${esc(s.name)}</span><span class="meta">${g.t.name === 'Meine Lieblingsläden' ? stype(s.type).icon + ' ' + stype(s.type).name + ' · ' : ''}${esc(s.address || '')}</span></div>
         ${n ? `<span class="badge">${n}</span>` : ''}
         <button class="more" data-act="edit-store" data-id="${s.id}" aria-label="bearbeiten">⋯</button>
       </div>`;
-    }).join('')}</div>`).join('') || '<div class="empty card"><p class="muted">Kein Laden gefunden.</p></div>'}
+    }).join('')}</div>`).join('') || (ui.storeType === 'fav' ? '' : '<div class="empty card"><p class="muted">Kein Laden gefunden.</p></div>')}
   `;
 }
 
@@ -343,7 +356,7 @@ function editItem(it) {
     <label>Menge / Notiz<input name="note" value="${esc(it.note || '')}" placeholder="z. B. 500 g, die rote Packung"></label>
     <div class="two">
       <label>Wer kauft?<select name="who">${opts([{ v: '', t: '— offen —' }, ...state.members.map((m) => ({ v: m.id, t: m.name }))], it.who || '')}</select></label>
-      <label>Wo?<select name="storeId">${opts([{ v: '', t: '— egal wo —' }, ...[...state.stores].sort((a, b) => b.fav - a.fav || a.name.localeCompare(b.name)).map((s) => ({ v: s.id, t: (s.fav ? '★ ' : '') + s.name }))], it.storeId || '')}</select></label>
+      <label>Wo?<select name="storeId"><option value="">— egal wo —</option>${state.stores.some((s) => s.fav) ? `<optgroup label="★ Lieblingsläden">${opts(state.stores.filter((s) => s.fav).map((s) => ({ v: s.id, t: s.name })), it.storeId)}</optgroup>` : ''}<optgroup label="Alle Läden">${opts(state.stores.filter((s) => !s.fav).sort((a, b) => a.name.localeCompare(b.name)).map((s) => ({ v: s.id, t: s.name })), it.storeId)}</optgroup></select></label>
     </div>
     <label>Abteilung<select name="cat">${opts(state.categories.map((c) => ({ v: c.id, t: c.icon + ' ' + c.name })), cat(it.cat).id)}</select></label>
     <div class="photo-box"></div>
@@ -386,6 +399,7 @@ function editStore(s) {
       <label>Art<select name="type">${opts(STORE_TYPES.map((t) => ({ v: t.id, t: t.icon + ' ' + t.name })), s.type)}</select></label>
       <label>Adresse<input name="address" value="${esc(s.address || '')}"></label>
     </div>
+    <label class="switch"><input type="checkbox" name="fav" ${s.fav ? 'checked' : ''}><span class="knob"></span><span class="lbl">★ Lieblingsladen</span></label>
     <h4 class="sub">Laufweg <span class="muted small">vom Eingang bis zur Kasse</span></h4>
     <ol class="route"></ol>
     <menu>${isNew ? '' : '<button value="delete" class="btn danger ghost" formnovalidate>Löschen</button>'}<span></span><button value="cancel" class="btn" formnovalidate>Abbrechen</button><button value="save" class="btn primary">Speichern</button></menu>
@@ -397,7 +411,7 @@ function editStore(s) {
       if (ui.fStore === s.id) ui.fStore = 'all';
     }
     if (v === 'save') {
-      Object.assign(s, { name: fd.get('name').trim(), type: fd.get('type'), address: fd.get('address').trim(), route });
+      Object.assign(s, { name: fd.get('name').trim(), type: fd.get('type'), address: fd.get('address').trim(), route, fav: fd.get('fav') === 'on' });
       if (isNew) state.stores.push(s);
     }
     save(); render();
@@ -557,7 +571,7 @@ document.addEventListener('click', async (e) => {
     case 'goto-person': ui.fPerson = id; ui.fStore = 'all'; go('list'); break;
     case 'switch-me': go('people'); break;
     case 'set-me': state.me = id; save(); render(); toast(`Hallo ${member(id).name}!`); break;
-    case 'fav': st.fav = !st.fav; save(); render(); break;
+    case 'fav': st.fav = !st.fav; save(); render(); toast(st.fav ? `★ ${st.name} ist jetzt Lieblingsladen` : `${st.name} ist kein Favorit mehr`); break;
     case 'new-store': editStore(); break;
     case 'edit-store': editStore(store(id)); break;
     case 'osm': osmSearch(); break;

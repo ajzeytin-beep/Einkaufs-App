@@ -39,6 +39,7 @@ function freshState() {
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
     stores: EMDEN_STORES.map((s) => ({ id: uid(), ...s, route: [...catIds], fav: s.name === 'Edeka Südbahnhof' })),
     items: [],
+    offers: [],
     learned: {},
   };
 }
@@ -50,7 +51,7 @@ const save = () => DB.set('state', state).catch((e) => toast('Speichern fehlgesc
 
 // Übernimmt Daten aus Version 1 (eine Liste, ein Laden)
 function migrate(old) {
-  if (old.v === 2) return old;
+  if (old.v === 2) { old.offers ||= []; return old; }
   const s = freshState();
   if (old.categories) s.categories = old.categories;
   const edeka = s.stores.find((x) => x.name === 'Edeka Südbahnhof');
@@ -80,15 +81,54 @@ const categorize = (name, raw = name) => {
   return state.categories.some((x) => x.id === c) ? c : 'sonstiges';
 };
 
+// ================= Angebote =================
+const today = () => new Date().toISOString().slice(0, 10);
+const nextSaturday = () => { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); return d.toISOString().slice(0, 10); };
+const activeOffers = () => state.offers.filter((o) => !o.until || o.until >= today());
+const words = (t) => t.toLowerCase().replace(/[^a-zäöüß0-9 ]/g, ' ').split(/\s+/).filter((w) => w.length >= 4);
+function sameWord(a, b) {
+  const n = Math.min(5, a.length, b.length);
+  return a.slice(0, n) === b.slice(0, n) && (a.startsWith(b) || b.startsWith(a) || n >= 5);
+}
+function offersFor(it) {
+  const iw = words(it.name), strong = [], soft = [];
+  for (const o of activeOffers()) {
+    const ow = words(o.name);
+    if (iw.some((a) => ow.some((b) => sameWord(a, b)))) strong.push(o);
+    else if (o.cat === cat(it.cat).id && o.cat !== 'sonstiges') soft.push(o);
+  }
+  return { strong, soft };
+}
+const euro = (p) => (p || p === 0) && p !== '' ? Number(String(p).replace(',', '.')).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) : '';
+const untilTxt = (d) => d ? 'bis ' + new Date(d + 'T12:00').toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' }) : '';
+function offerLine(o) {
+  const st = store(o.storeId);
+  return [st ? st.name : 'Überall', euro(o.price), untilTxt(o.until)].filter(Boolean).join(' · ');
+}
+// Prospekt-Links nach Kette (offizielle Seiten der Händler)
+const CHAIN_LINKS = [
+  ['edeka', 'Edeka', 'https://www.edeka.de'], ['rewe', 'Rewe', 'https://www.rewe.de/angebote/'], ['lidl', 'Lidl', 'https://www.lidl.de'],
+  ['aldi', 'Aldi Nord', 'https://www.aldi-nord.de'], ['netto', 'Netto', 'https://www.netto-online.de'], ['penny', 'Penny', 'https://www.penny.de'],
+  ['kaufland', 'Kaufland', 'https://www.kaufland.de'], ['rossmann', 'Rossmann', 'https://www.rossmann.de'], ['dm', 'dm', 'https://www.dm.de'],
+];
+function chainLinks() {
+  const names = state.stores.filter((s) => s.fav || state.items.some((i) => i.storeId === s.id)).map((s) => s.name.toLowerCase());
+  const mine = CHAIN_LINKS.filter(([k]) => names.some((n) => n.split(/\s+/)[0] === k));
+  return mine.length ? mine : CHAIN_LINKS.slice(0, 4);
+}
+
 function avatar(m, size = '') {
   if (!m) return `<span class="av none ${size}" title="Nicht zugeteilt">?</span>`;
   return `<span class="av ${size}" style="--c:${m.color}" title="${esc(m.name)}">${esc(m.name.trim()[0] || '?').toUpperCase()}</span>`;
 }
 
-function toast(msg) {
+function toast(msg, action) {
   const t = $('#toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200);
+  t.innerHTML = `<span>${esc(msg)}</span>` + (action ? `<button>${esc(action.label)}</button>` : '');
+  t.classList.toggle('deal-toast', !!action?.deal);
+  if (action) $('button', t).onclick = () => { t.classList.remove('show'); action.fn(); };
+  t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), action ? 6000 : 2200);
 }
 
 function shrinkImage(file, max = 1000) {
@@ -134,7 +174,13 @@ function addItem(raw, extra = {}) {
 
 function itemRow(it, opts = {}) {
   const s = store(it.storeId), m = member(it.who);
-  const meta = [it.note && esc(it.note), opts.showStore && s && `<span class="tag">${stype(s.type).icon} ${esc(s.name)}</span>`, opts.showCat && `<span class="tag">${cat(it.cat).icon} ${esc(cat(it.cat).name)}</span>`].filter(Boolean).join(' ');
+  let deal = '';
+  if (!it.done && state.offers.length) {
+    const { strong, soft } = offersFor(it);
+    if (strong.length) deal = `<button class="deal" data-act="deal">% ${strong.length > 1 ? strong.length + ' Angebote' : 'Angebot: ' + esc(offerLine(strong[0]))}</button>`;
+    else if (soft.length) deal = `<button class="deal soft" data-act="deal">% ${soft.length} ${soft.length > 1 ? 'Angebote' : 'Angebot'} in ${esc(cat(it.cat).name)}</button>`;
+  }
+  const meta = [deal, it.note && esc(it.note), opts.showStore && s && `<span class="tag">${stype(s.type).icon} ${esc(s.name)}</span>`, opts.showCat && `<span class="tag">${cat(it.cat).icon} ${esc(cat(it.cat).name)}</span>`].filter(Boolean).join(' ');
   return `<div class="item ${it.done ? 'done' : ''}" data-item="${it.id}">
     <button class="check" data-act="toggle" aria-label="abhaken"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
     <div class="txt" data-act="toggle"><span class="name">${esc(it.name)}</span>${meta ? `<span class="meta">${meta}</span>` : ''}</div>
@@ -192,6 +238,7 @@ function renderDash() {
       <div class="stat"><b>${pct}%</b><span>erledigt</span><i class="bar"><i style="width:${pct}%"></i></i></div>
     </div>
 
+    ${dealsBanner(open)}
     <h2 class="sec">Wer kauft was</h2>
     <div class="grid">${state.members.map((m) => personCard(m, open.filter((i) => i.who === m.id))).join('')}
       ${unassigned.length ? personCard(null, unassigned) : ''}</div>
@@ -334,6 +381,93 @@ function renderSettings() {
       <button class="btn danger" data-act="reset">Alles zurücksetzen</button>
     </div>
   `;
+}
+
+function dealsBanner(open) {
+  const hits = open.map((i) => ({ i, ...offersFor(i) })).filter((x) => x.strong.length);
+  if (!hits.length) return '';
+  return `<button class="card deal-card" data-act="goto" data-view="list">
+    <span class="sicon">%</span>
+    <div><h3>${hits.length} ${hits.length === 1 ? 'Artikel ist' : 'Artikel sind'} im Angebot</h3>
+    <p class="muted">${hits.slice(0, 3).map((x) => esc(x.i.name) + ' bei ' + esc(store(x.strong[0].storeId)?.name || 'überall')).join(' · ')}</p></div>
+  </button>`;
+}
+
+// ================= Ansicht: Angebote =================
+function renderOffers() {
+  const act = activeOffers(), expired = state.offers.length - act.length;
+  const open = openItems();
+  const groups = [...new Set(act.map((o) => o.storeId || ''))].map((sid) => ({ s: store(sid), list: act.filter((o) => (o.storeId || '') === sid) }))
+    .sort((a, b) => (b.s?.fav || 0) - (a.s?.fav || 0));
+  $('#view-offers').innerHTML = `
+    <header class="page-head"><div><p class="eyebrow">${act.length} aktuelle Angebote</p><h1>Angebote</h1></div>
+      <button class="btn primary" data-act="new-offer">${ICON.plus} Angebot</button></header>
+    <div class="card pad">
+      <p class="muted small" style="margin:0 0 10px">Prospekte eurer Läden ansehen und Interessantes mit „+ Angebot“ eintragen.
+        Die App zeigt es dann direkt bei passenden Artikeln auf eurer Liste.</p>
+      <div class="links">${chainLinks().map(([, n, url]) => `<a class="btn sm" href="${url}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join('')}
+        <a class="btn sm" href="https://www.kaufda.de" target="_blank" rel="noopener">kaufDA ↗</a>
+        <a class="btn sm" href="https://www.marktguru.de" target="_blank" rel="noopener">marktguru ↗</a></div>
+    </div>
+    ${groups.map((g) => `<h2 class="sec">${g.s ? (g.s.fav ? '★ ' : stype(g.s.type).icon + ' ') + esc(g.s.name) : '🏷️ Überall'}</h2>
+      <div class="card list-card">${g.list.map((o) => {
+        const fits = open.filter((i) => offersFor(i).strong.includes(o));
+        return `<div class="srow">
+          <span class="sicon sm">${cat(o.cat).icon}</span>
+          <div class="txt" data-act="edit-offer" data-id="${o.id}"><span class="name">${esc(o.name)}${o.price ? ` <span class="price">${euro(o.price)}</span>` : ''}</span>
+            <span class="meta">${[untilTxt(o.until), o.note && esc(o.note)].filter(Boolean).join(' · ')}${fits.length ? ` <span class="tag hit">✓ passt zu ${fits.map((f) => esc(f.name)).join(', ')}</span>` : ''}</span></div>
+          <button class="more" data-act="edit-offer" data-id="${o.id}" aria-label="bearbeiten">⋯</button></div>`;
+      }).join('')}</div>`).join('') ||
+      `<div class="empty card"><p class="big">Noch keine Angebote eingetragen.</p><p class="muted">Z. B. „Spaghetti, Edeka, 0,99 €, bis Samstag“. Passt ein Angebot zu eurer Liste, gibt’s einen Hinweis.</p></div>`}
+    ${expired ? `<p class="small muted">${expired} abgelaufene Angebote ausgeblendet. <button class="link" data-act="clean-offers">Entfernen</button></p>` : ''}
+  `;
+}
+
+function showDeals(it) {
+  const { strong, soft } = offersFor(it);
+  const row = (o) => `<div class="osm-row"><span>${cat(o.cat).icon}</span><span class="txt"><b>${esc(o.name)}</b><small>${esc(offerLine(o))}${o.note ? ' · ' + esc(o.note) : ''}</small></span>
+    ${o.storeId ? `<button type="button" class="btn sm ${it.storeId === o.storeId ? '' : 'primary'}" data-take="${o.id}">${it.storeId === o.storeId ? '✓ Dort' : 'Dort holen'}</button>` : ''}</div>`;
+  const f = dialog(`<h3>Angebote für „${esc(it.name)}“</h3>
+    ${strong.length ? `<div class="osm">${strong.map(row).join('')}</div>` : ''}
+    ${soft.length ? `<h4 class="sub">Ähnliches in ${esc(cat(it.cat).name)}</h4><div class="osm">${soft.map(row).join('')}</div>` : ''}
+    <menu><span></span><button value="cancel" class="btn">Schließen</button></menu>`, () => { save(); render(); });
+  f.onclick = (e) => {
+    const b = e.target.closest('[data-take]'); if (!b) return;
+    const o = state.offers.find((x) => x.id === b.dataset.take);
+    it.storeId = o.storeId; $('#dlg').close(); toast(`${it.name} → ${store(o.storeId).name}`);
+  };
+}
+
+function editOffer(o) {
+  const isNew = !o;
+  o ||= { id: uid(), name: '', storeId: state.stores.find((s) => s.fav)?.id || '', price: '', until: nextSaturday(), note: '' };
+  const favs = state.stores.filter((s) => s.fav), others = state.stores.filter((s) => !s.fav).sort((a, b) => a.name.localeCompare(b.name));
+  dialog(`
+    <h3>${isNew ? 'Neues Angebot' : 'Angebot bearbeiten'}</h3>
+    <label>Produkt<input name="name" value="${esc(o.name)}" required placeholder="z. B. Barilla Spaghetti, Coca-Cola 6×1 l"></label>
+    <div class="two">
+      <label>Laden<select name="storeId"><option value="">Überall / alle Filialen</option>
+        ${favs.length ? `<optgroup label="★ Lieblingsläden">${opts(favs.map((s) => ({ v: s.id, t: s.name })), o.storeId)}</optgroup>` : ''}
+        <optgroup label="Alle Läden">${opts(others.map((s) => ({ v: s.id, t: s.name })), o.storeId)}</optgroup></select></label>
+      <label>Preis (€)<input name="price" value="${esc(String(o.price ?? ''))}" inputmode="decimal" placeholder="0,99"></label>
+    </div>
+    <div class="two">
+      <label>Gültig bis<input type="date" name="until" value="${o.until || ''}"></label>
+      <label>Abteilung<select name="cat"><option value="">automatisch</option>${opts(state.categories.map((c) => ({ v: c.id, t: c.icon + ' ' + c.name })), isNew ? '' : o.cat)}</select></label>
+    </div>
+    <label>Notiz<input name="note" value="${esc(o.note || '')}" placeholder="z. B. nur mit App, 2 für 1"></label>
+    <menu>${isNew ? '' : '<button value="delete" class="btn danger ghost" formnovalidate>Löschen</button>'}<span></span><button value="cancel" class="btn" formnovalidate>Abbrechen</button><button value="save" class="btn primary">Speichern</button></menu>
+  `, (v, fd) => {
+    if (v === 'delete') state.offers = state.offers.filter((x) => x !== o);
+    if (v === 'save') {
+      const name = fd.get('name').trim();
+      Object.assign(o, { name, storeId: fd.get('storeId') || null, price: fd.get('price').trim(), until: fd.get('until'), note: fd.get('note').trim(), cat: fd.get('cat') || categorize(name) });
+      if (isNew) state.offers.unshift(o);
+      const fits = openItems().filter((i) => offersFor(i).strong.includes(o) || offersFor(i).soft.includes(o));
+      if (fits.length) toast(`Passt zu eurer Liste: ${fits.map((i) => i.name).join(', ')}`);
+    }
+    save(); render();
+  });
 }
 
 // ================= Dialoge =================
@@ -520,7 +654,15 @@ document.addEventListener('submit', (e) => {
   if (!v) return;
   addItem(v);
   render();
-  toast(`„${parseInput(v).name}“ → ${cat(state.items[0].cat).name}`);
+  const it = state.items[0], { strong, soft } = offersFor(it);
+  const hit = strong[0] || soft[0];
+  if (hit) {
+    const st = store(hit.storeId);
+    toast(strong[0] ? `% ${it.name} im Angebot: ${offerLine(hit)}` : `% Ähnliches im Angebot: ${hit.name} · ${offerLine(hit)}`, {
+      deal: true, label: st ? 'Dort holen' : 'Ansehen',
+      fn: () => { if (st) { it.storeId = st.id; save(); render(); toast(`${it.name} → ${st.name}`); } else showDeals(it); },
+    });
+  } else toast(`„${it.name}“ → ${cat(it.cat).name}`);
   $(`#view-${ui.view} [data-form=add] input`)?.focus();
 });
 
@@ -550,6 +692,10 @@ document.addEventListener('click', async (e) => {
     case 'toggle': it.done = !it.done; save(); render(); break;
     case 'photo': $('#photo-big').src = it.photo; $('#photo-dialog').showModal(); break;
     case 'edit': editItem(it); break;
+    case 'deal': showDeals(it); break;
+    case 'new-offer': editOffer(); break;
+    case 'edit-offer': editOffer(state.offers.find((o) => o.id === id)); break;
+    case 'clean-offers': state.offers = activeOffers(); save(); render(); toast('Abgelaufene Angebote entfernt'); break;
     case 'who': { // Antippen wechselt: Ich → Partner → … → offen
       const ids = [...state.members.map((m) => m.id), null];
       it.who = ids[(ids.indexOf(it.who) + 1) % ids.length];
@@ -600,7 +746,7 @@ document.addEventListener('click', async (e) => {
 });
 
 // ================= Navigation & Start =================
-const RENDER = { dash: renderDash, list: renderList, stores: renderStores, people: renderPeople, settings: renderSettings };
+const RENDER = { dash: renderDash, list: renderList, offers: renderOffers, stores: renderStores, people: renderPeople, settings: renderSettings };
 function render() {
   $$('.view').forEach((v) => (v.hidden = v.id !== 'view-' + ui.view));
   $$('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === ui.view));

@@ -255,3 +255,15 @@ button:focus:not(:focus-visible){outline:none}
 .more-opts[open] summary{margin-bottom:6px}
 @media (max-width:520px){.offer-grid{grid-template-columns:1fr}}
 input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
+
+/* ---- Merkliste einfügen ---- */
+.howto{margin:0;padding-left:20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:4px}
+.howto b{color:var(--fg)}
+.paste-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.imp-rows{display:flex;flex-direction:column;gap:6px;max-height:42vh;overflow:auto}
+.imp-rows>p{margin:4px 0}
+.imp-row{display:grid;grid-template-columns:26px 1fr 72px 1fr;gap:6px;align-items:center}
+.imp-row input,.imp-row select{padding:9px 10px;font-size:14px;border-radius:10px}
+.imp-row input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);padding:0}
+.imp-row.off{opacity:.45}
+@media (max-width:520px){.imp-row{grid-template-columns:26px 1fr 72px;background:var(--bg);padding:8px;border-radius:14px}.imp-row select{grid-column:2/4}}

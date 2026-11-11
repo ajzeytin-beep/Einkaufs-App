@@ -214,6 +214,7 @@ const ICON = {
   cam: '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   pin: '<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  paste: '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h6M9 18h3"/></svg>',
   star: '<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z"/></svg>',
 };
 
@@ -418,7 +419,8 @@ function renderOffers() {
     .sort((a, b) => b.list.length - a.list.length || (b.s?.fav || 0) - (a.s?.fav || 0));
   const link = (s) => { const k = s?.name.toLowerCase().split(/\s+/)[0]; return CHAIN_LINKS.find(([c]) => c === k); };
   $('#view-offers').innerHTML = `
-    <header class="page-head"><div><p class="eyebrow">${act.length ? act.length + ' Angebote diese Woche' : 'Diese Woche'}</p><h1>Angebote</h1></div></header>
+    <header class="page-head"><div><p class="eyebrow">${act.length ? act.length + ' Angebote diese Woche' : 'Diese Woche'}</p><h1>Angebote</h1></div>
+      <button class="btn primary" data-act="import">${ICON.paste} Aus Merkliste</button></header>
     <div class="offer-grid">
       ${cards.map(({ s, list }) => {
         const l = link(s);
@@ -780,6 +782,7 @@ document.addEventListener('click', async (e) => {
     case 'edit': editItem(it); break;
     case 'deal': showDeals(it); break;
     case 'new-offer': editOffer(null, id || ''); break;
+    case 'import': openImport(); break;
     case 'edit-offer': editOffer(state.offers.find((o) => o.id === id)); break;
     case 'clean-offers': state.offers = activeOffers(); save(); render(); toast('Abgelaufene Angebote entfernt'); break;
     case 'who': { // Antippen wechselt: Ich → Partner → … → offen

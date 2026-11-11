@@ -1,5 +1,5 @@
-const C = 'einkauf-v10';
-const FILES = ['./', 'index.html', 'style.css', 'app.js', 'categories.js', 'stores.js', 'sync.js', 'sync-config.js', 'manifest.json', 'icon.svg'];
+const C = 'einkauf-v11';
+const FILES = ['./', 'index.html', 'style.css', 'app.js', 'categories.js', 'stores.js', 'sync.js', 'import.js', 'sync-config.js', 'manifest.json', 'icon.svg'];
 self.addEventListener('install', (e) => e.waitUntil(caches.open(C).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
 // Netzwerk zuerst (für Updates), offline aus dem Cache

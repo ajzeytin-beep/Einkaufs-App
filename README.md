@@ -11,7 +11,7 @@ Design: warmes Beige/Braun, hell und dunkel.
   Die App gleicht sie mit der Liste ab: Artikel bekommen ein **%-Abzeichen**, beim Eintragen erscheint ein Hinweis
   mit „Dort holen“, die Übersicht zeigt „X Artikel sind im Angebot“. Auch Ähnliches derselben Abteilung wird gemeldet
   (z. B. Penne, wenn Spaghetti im Angebot sind). Links zu den Prospekten eurer Läden, kaufDA und marktguru.
-  Abgelaufene Angebote werden automatisch ausgeblendet. Darstellung als Karten pro Laden, Eintragen mit „+ Angebot“ direkt auf der Karte (nur Produkt + Preis).
+  Abgelaufene Angebote werden automatisch ausgeblendet. **„Aus Merkliste“**: Screenshot z. B. der marktguru-Merkliste → in Fotos Text kopieren (Live Text) → einfügen; Produkte, Preise und Läden werden erkannt und nach Vorschau übernommen (auch direkt auf die Einkaufsliste). Darstellung als Karten pro Laden, Eintragen mit „+ Angebot“ direkt auf der Karte (nur Produkt + Preis).
 - **Läden:** Startliste mit Supermärkten, Discountern und Drogerien in Emden. Suchen, Lieblingsläden per Stern ★ (stehen oben, in der Übersicht und in der Ladenauswahl), anlegen, bearbeiten, löschen.
   „Läden in Emden suchen“ lädt weitere Geschäfte live aus OpenStreetMap (Baumarkt, Mode, Bäcker, Elektronik …).
   Jeder Laden hat seinen eigenen Laufweg (⋯ → Reihenfolge der Abteilungen mit ▲/▼).

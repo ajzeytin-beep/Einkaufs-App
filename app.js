@@ -45,7 +45,7 @@ function freshState() {
 }
 
 let state = freshState();
-const ui = { view: 'dash', fStore: 'all', fPerson: 'all', storeType: 'all', storeQuery: '' };
+const ui = { view: 'dash', fStore: 'all', fPerson: 'all', storeType: 'all', storeQuery: '', draft: '', addWho: null };
 
 const save = () => { DB.set('state', state).catch((e) => toast('Speichern fehlgeschlagen: ' + e)); Sync.push(); };
 
@@ -172,7 +172,7 @@ function addItem(raw, extra = {}) {
   const { name, note } = parseInput(raw);
   if (!name) return;
   const defStore = ui.fStore !== 'all' && ui.fStore !== 'none' ? ui.fStore : null;
-  const defWho = ui.fPerson !== 'all' && ui.fPerson !== 'none' ? ui.fPerson : null;
+  const defWho = ui.addWho || null;
   state.items.unshift({ id: uid(), name, note, cat: categorize(name, raw), photo: null, done: false,
     storeId: defStore, who: defWho, by: state.me, created: Date.now(), ...extra });
   save();
@@ -197,10 +197,16 @@ function itemRow(it, opts = {}) {
 }
 
 function quickAdd(placeholder = 'Was wird gebraucht?') {
-  return `<form class="quick" data-form="add" autocomplete="off">
-    <input name="q" placeholder="${placeholder}" enterkeyhint="done">
-    <button type="button" class="icon-btn" data-act="add-photo" title="Mit Foto hinzufügen">${ICON.cam}</button>
-    <button class="icon-btn primary" title="Hinzufügen">${ICON.plus}</button>
+  // Gewählte Person bleibt bestehen (mehrere Sachen hintereinander für dieselbe Person)
+  if (ui.addWho && !member(ui.addWho)) ui.addWho = null;
+  const chip = (id, label, m) => `<button type="button" class="chip sm ${ui.addWho === id ? 'on' : ''}" data-act="add-who" data-id="${id ?? ''}">${m ? avatar(m, 'xs') : ''}${esc(label)}</button>`;
+  return `<form class="quick-form" data-form="add" autocomplete="off">
+    <div class="quick">
+      <input name="q" placeholder="${placeholder}" enterkeyhint="done" value="${esc(ui.draft)}">
+      <button type="button" class="icon-btn" data-act="add-photo" title="Mit Foto hinzufügen">${ICON.cam}</button>
+      <button class="icon-btn primary" title="Hinzufügen">${ICON.plus}</button>
+    </div>
+    ${state.members.length ? `<div class="for-row"><span>Wer kauft?</span>${state.members.map((m) => chip(m.id, m.name, m)).join('')}${chip(null, 'Offen')}</div>` : ''}
   </form>`;
 }
 
@@ -724,8 +730,15 @@ document.addEventListener('submit', (e) => {
   const v = f.q.value.trim();
   if (!v) return;
   addItem(v);
+  ui.draft = '';
   render();
-  const it = state.items[0], { strong, soft } = offersFor(it);
+  afterAdd(state.items[0]);
+  $(`#view-${ui.view} [data-form=add] input`)?.focus();
+});
+
+// Rückmeldung nach dem Eintragen (inkl. Angebots-Hinweis)
+function afterAdd(it) {
+  const { strong, soft } = offersFor(it);
   const hit = strong[0] || soft[0];
   if (hit) {
     const st = store(hit.storeId);
@@ -733,11 +746,11 @@ document.addEventListener('submit', (e) => {
       deal: true, label: st ? 'Dort holen' : 'Ansehen',
       fn: () => { if (st) { it.storeId = st.id; save(); render(); toast(`${it.name} → ${st.name}`); } else showDeals(it); },
     });
-  } else toast(`„${it.name}“ → ${cat(it.cat).name}`);
-  $(`#view-${ui.view} [data-form=add] input`)?.focus();
-});
+  } else toast(`„${it.name}“ → ${cat(it.cat).name}${it.who ? ' · ' + member(it.who).name : ''}`);
+}
 
 document.addEventListener('input', (e) => {
+  if (e.target.name === 'q' && e.target.closest('[data-form=add]')) { ui.draft = e.target.value; return; } // Entwurf merken
   const k = e.target.dataset.input;
   if (!k) return;
   ui[k] = e.target.value;
@@ -779,13 +792,19 @@ document.addEventListener('click', async (e) => {
       if (!photo) return;
       const name = f.q.value.trim() || prompt('Wie heißt der Artikel?');
       if (!name) return;
-      addItem(name, { photo }); render(); toast('Mit Foto hinzugefügt');
+      addItem(name, { photo }); ui.draft = ''; render(); toast('Mit Foto hinzugefügt');
       break;
     }
     case 'clear-done': state.items = state.items.filter((i) => !i.done || !$(`#view-list [data-item="${i.id}"]`)); save(); render(); break;
     case 'goto': go(el.dataset.view); break;
     case 'goto-store': ui.fStore = id; ui.fPerson = 'all'; go('list'); break;
-    case 'goto-person': ui.fPerson = id; ui.fStore = 'all'; go('list'); break;
+    case 'goto-person':
+      if (ui.draft.trim()) { // Eingetipptes direkt dieser Person geben
+        addItem(ui.draft, { who: id === 'none' ? null : id }); ui.draft = '';
+        render(); afterAdd(state.items[0]); break;
+      }
+      ui.fPerson = id; ui.fStore = 'all'; go('list'); break;
+    case 'add-who': ui.addWho = id || null; render(); $(`#view-${ui.view} [data-form=add] input`)?.focus(); break;
     case 'switch-me': go('people'); break;
     case 'set-me': state.me = id; save(); render(); toast(`Hallo ${member(id).name}!`); break;
     case 'fav': st.fav = !st.fav; save(); render(); toast(st.fav ? `★ ${st.name} ist jetzt Lieblingsladen` : `${st.name} ist kein Favorit mehr`); break;

@@ -222,3 +222,13 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(
 .stack .osm-row{width:100%}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button:focus:not(:focus-visible){outline:none}
+
+/* ---- Schnell eintragen: Wer kauft? ---- */
+.quick-form{display:flex;flex-direction:column;gap:10px}
+.for-row{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px}
+.for-row::-webkit-scrollbar{display:none}
+.for-row>span{flex:none;font-size:13px;font-weight:600;color:var(--muted);margin-right:2px}
+.chip.sm{padding:6px 12px;font-size:13px}
+.chip.on .av{box-shadow:0 0 0 2px var(--bg)}
+.quick input:focus-visible{outline:none}
+.quick:focus-within{box-shadow:var(--shadow),0 0 0 3px var(--accent-soft)}

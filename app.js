@@ -411,29 +411,33 @@ function dealsBanner(open) {
 function renderOffers() {
   const act = activeOffers(), expired = state.offers.length - act.length;
   const open = openItems();
-  const groups = [...new Set(act.map((o) => o.storeId || ''))].map((sid) => ({ s: store(sid), list: act.filter((o) => (o.storeId || '') === sid) }))
-    .sort((a, b) => (b.s?.fav || 0) - (a.s?.fav || 0));
+  // Karten: Lieblingsläden immer, andere Läden nur mit Angeboten, "Überall" falls vorhanden
+  const sids = [...new Set([...state.stores.filter((s) => s.fav).map((s) => s.id), ...act.map((o) => o.storeId || '')])];
+  const cards = sids.map((sid) => ({ s: store(sid), list: act.filter((o) => (o.storeId || '') === sid) }))
+    .filter((c) => c.s || c.list.length)
+    .sort((a, b) => b.list.length - a.list.length || (b.s?.fav || 0) - (a.s?.fav || 0));
+  const link = (s) => { const k = s?.name.toLowerCase().split(/\s+/)[0]; return CHAIN_LINKS.find(([c]) => c === k); };
   $('#view-offers').innerHTML = `
-    <header class="page-head"><div><p class="eyebrow">${act.length} aktuelle Angebote</p><h1>Angebote</h1></div>
-      <button class="btn primary" data-act="new-offer">${ICON.plus} Angebot</button></header>
-    <div class="card pad">
-      <p class="muted small" style="margin:0 0 10px">Prospekte eurer Läden ansehen und Interessantes mit „+ Angebot“ eintragen.
-        Die App zeigt es dann direkt bei passenden Artikeln auf eurer Liste.</p>
-      <div class="links">${chainLinks().map(([, n, url]) => `<a class="btn sm" href="${url}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join('')}
-        <a class="btn sm" href="https://www.kaufda.de" target="_blank" rel="noopener">kaufDA ↗</a>
-        <a class="btn sm" href="https://www.marktguru.de" target="_blank" rel="noopener">marktguru ↗</a></div>
+    <header class="page-head"><div><p class="eyebrow">${act.length ? act.length + ' Angebote diese Woche' : 'Diese Woche'}</p><h1>Angebote</h1></div></header>
+    <div class="offer-grid">
+      ${cards.map(({ s, list }) => {
+        const l = link(s);
+        return `<div class="card offer-card">
+          <div class="oc-head">
+            <span class="sicon sm">${s ? stype(s.type).icon : '🏷️'}</span>
+            <div><h3>${s ? esc(s.name) : 'Überall'}</h3>${l ? `<a class="muted small-link" href="${l[2]}" target="_blank" rel="noopener">Prospekt ansehen ↗</a>` : ''}</div>
+          </div>
+          ${list.length ? `<ul class="oc-list">${list.map((o) => {
+            const fits = open.some((i) => offersFor(i).strong.includes(o));
+            return `<li data-act="edit-offer" data-id="${o.id}"><span class="on">${esc(o.name)}${fits ? ' <span class="fit" title="Steht auf eurer Liste">✓</span>' : ''}</span>${o.price ? `<span class="price">${euro(o.price)}</span>` : ''}</li>`;
+          }).join('')}</ul>` : '<p class="muted oc-empty">Noch keine Angebote</p>'}
+          <button class="oc-add" data-act="new-offer" data-id="${s ? s.id : ''}">${ICON.plus} Angebot</button>
+        </div>`;
+      }).join('')}
+      <button class="card offer-card oc-other" data-act="new-offer" data-id="">${ICON.plus}<span>Angebot in einem<br>anderen Laden</span></button>
     </div>
-    ${groups.map((g) => `<h2 class="sec">${g.s ? (g.s.fav ? '★ ' : stype(g.s.type).icon + ' ') + esc(g.s.name) : '🏷️ Überall'}</h2>
-      <div class="card list-card">${g.list.map((o) => {
-        const fits = open.filter((i) => offersFor(i).strong.includes(o));
-        return `<div class="srow">
-          <span class="sicon sm">${cat(o.cat).icon}</span>
-          <div class="txt" data-act="edit-offer" data-id="${o.id}"><span class="name">${esc(o.name)}${o.price ? ` <span class="price">${euro(o.price)}</span>` : ''}</span>
-            <span class="meta">${[untilTxt(o.until), o.note && esc(o.note)].filter(Boolean).join(' · ')}${fits.length ? ` <span class="tag hit">✓ passt zu ${fits.map((f) => esc(f.name)).join(', ')}</span>` : ''}</span></div>
-          <button class="more" data-act="edit-offer" data-id="${o.id}" aria-label="bearbeiten">⋯</button></div>`;
-      }).join('')}</div>`).join('') ||
-      `<div class="empty card"><p class="big">Noch keine Angebote eingetragen.</p><p class="muted">Z. B. „Spaghetti, Edeka, 0,99 €, bis Samstag“. Passt ein Angebot zu eurer Liste, gibt’s einen Hinweis.</p></div>`}
-    ${expired ? `<p class="small muted">${expired} abgelaufene Angebote ausgeblendet. <button class="link" data-act="clean-offers">Entfernen</button></p>` : ''}
+    <p class="small muted">✓ = steht auf eurer Liste. Angebote gelten bis Samstag und verschwinden danach von selbst.
+      ${expired ? `<button class="link" data-act="clean-offers">${expired} abgelaufene löschen</button>` : ''}</p>
   `;
 }
 
@@ -452,30 +456,28 @@ function showDeals(it) {
   };
 }
 
-function editOffer(o) {
+function editOffer(o, presetStore) {
   const isNew = !o;
-  o ||= { id: uid(), name: '', storeId: state.stores.find((s) => s.fav)?.id || '', price: '', until: nextSaturday(), note: '' };
+  o ||= { id: uid(), name: '', storeId: presetStore ?? '', price: '', until: nextSaturday() };
   const favs = state.stores.filter((s) => s.fav), others = state.stores.filter((s) => !s.fav).sort((a, b) => a.name.localeCompare(b.name));
+  const fixed = isNew && presetStore;
   dialog(`
-    <h3>${isNew ? 'Neues Angebot' : 'Angebot bearbeiten'}</h3>
-    <label>Produkt<input name="name" value="${esc(o.name)}" required placeholder="z. B. Barilla Spaghetti, Coca-Cola 6×1 l"></label>
-    <div class="two">
-      <label>Laden<select name="storeId"><option value="">Überall / alle Filialen</option>
+    <h3>${isNew ? (fixed ? 'Angebot bei ' + esc(store(presetStore).name) : 'Neues Angebot') : 'Angebot'}</h3>
+    <div class="two wide-first">
+      <label>Was?<input name="name" value="${esc(o.name)}" required placeholder="z. B. Spaghetti" autofocus></label>
+      <label>Preis<input name="price" value="${esc(String(o.price ?? ''))}" inputmode="decimal" placeholder="0,99 €"></label>
+    </div>
+    ${fixed ? `<input type="hidden" name="storeId" value="${presetStore}">` : `<label>Wo?<select name="storeId"><option value="">Überall</option>
         ${favs.length ? `<optgroup label="★ Lieblingsläden">${opts(favs.map((s) => ({ v: s.id, t: s.name })), o.storeId)}</optgroup>` : ''}
-        <optgroup label="Alle Läden">${opts(others.map((s) => ({ v: s.id, t: s.name })), o.storeId)}</optgroup></select></label>
-      <label>Preis (€)<input name="price" value="${esc(String(o.price ?? ''))}" inputmode="decimal" placeholder="0,99"></label>
-    </div>
-    <div class="two">
-      <label>Gültig bis<input type="date" name="until" value="${o.until || ''}"></label>
-      <label>Abteilung<select name="cat"><option value="">automatisch</option>${opts(state.categories.map((c) => ({ v: c.id, t: c.icon + ' ' + c.name })), isNew ? '' : o.cat)}</select></label>
-    </div>
-    <label>Notiz<input name="note" value="${esc(o.note || '')}" placeholder="z. B. nur mit App, 2 für 1"></label>
-    <menu>${isNew ? '' : '<button value="delete" class="btn danger ghost" formnovalidate>Löschen</button>'}<span></span><button value="cancel" class="btn" formnovalidate>Abbrechen</button><button value="save" class="btn primary">Speichern</button></menu>
+        <optgroup label="Alle Läden">${opts(others.map((s) => ({ v: s.id, t: s.name })), o.storeId)}</optgroup></select></label>`}
+    <details class="more-opts"${isNew ? '' : ' open'}><summary>Gültig ${untilTxt(o.until) || 'ohne Ende'}</summary>
+      <label>Gültig bis<input type="date" name="until" value="${o.until || ''}"></label></details>
+    <menu>${isNew ? '' : '<button value="delete" class="btn danger ghost" formnovalidate>Löschen</button>'}<span></span><button value="cancel" class="btn" formnovalidate>Abbrechen</button><button value="save" class="btn primary">${isNew ? 'Hinzufügen' : 'Speichern'}</button></menu>
   `, (v, fd) => {
     if (v === 'delete') state.offers = state.offers.filter((x) => x !== o);
     if (v === 'save') {
       const name = fd.get('name').trim();
-      Object.assign(o, { name, storeId: fd.get('storeId') || null, price: fd.get('price').trim(), until: fd.get('until'), note: fd.get('note').trim(), cat: fd.get('cat') || categorize(name) });
+      Object.assign(o, { name, storeId: fd.get('storeId') || null, price: fd.get('price').replace('€', '').trim(), until: fd.get('until') ?? o.until, cat: categorize(name) });
       if (isNew) state.offers.unshift(o);
       const fits = openItems().filter((i) => offersFor(i).strong.includes(o) || offersFor(i).soft.includes(o));
       if (fits.length) toast(`Passt zu eurer Liste: ${fits.map((i) => i.name).join(', ')}`);
@@ -777,7 +779,7 @@ document.addEventListener('click', async (e) => {
     case 'photo': $('#photo-big').src = it.photo; $('#photo-dialog').showModal(); break;
     case 'edit': editItem(it); break;
     case 'deal': showDeals(it); break;
-    case 'new-offer': editOffer(); break;
+    case 'new-offer': editOffer(null, id || ''); break;
     case 'edit-offer': editOffer(state.offers.find((o) => o.id === id)); break;
     case 'clean-offers': state.offers = activeOffers(); save(); render(); toast('Abgelaufene Angebote entfernt'); break;
     case 'who': { // Antippen wechselt: Ich → Partner → … → offen

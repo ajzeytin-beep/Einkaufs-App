@@ -232,3 +232,26 @@ button:focus:not(:focus-visible){outline:none}
 .chip.on .av{box-shadow:0 0 0 2px var(--bg)}
 .quick input:focus-visible{outline:none}
 .quick:focus-within{box-shadow:var(--shadow),0 0 0 3px var(--accent-soft)}
+
+/* ---- Angebote als Karten ---- */
+.offer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.offer-card{padding:16px;display:flex;flex-direction:column;gap:10px}
+.oc-head{display:flex;align-items:center;gap:12px}
+.small-link{font-size:13px;text-decoration:none}
+.oc-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.oc-list li{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 2px;border-top:1px solid var(--line);cursor:pointer;font-size:15px}
+.oc-list li:first-child{border-top:0}
+.oc-list .on{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.oc-list .price{flex:none;margin:0}
+.fit{color:var(--deal);font-weight:800}
+.oc-empty{font-size:14px;padding:4px 2px}
+.oc-add{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;color:var(--accent-d);font-weight:600;font-size:14px;padding:6px 10px 6px 6px;border-radius:999px;margin-top:auto}
+.oc-add:hover{background:var(--accent-soft)}
+.oc-add svg{width:16px;height:16px}
+.oc-other{align-items:center;justify-content:center;text-align:center;color:var(--muted);font-weight:600;border:2px dashed var(--line);background:none;box-shadow:none;min-height:140px}
+.oc-other svg{width:26px;height:26px}
+.two.wide-first{grid-template-columns:1fr 110px}
+.more-opts summary{cursor:pointer;color:var(--muted);font-size:14px;font-weight:600}
+.more-opts[open] summary{margin-bottom:6px}
+@media (max-width:520px){.offer-grid{grid-template-columns:1fr}}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}

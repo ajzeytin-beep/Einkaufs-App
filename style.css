@@ -278,3 +278,5 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 .sync-or{text-align:center;margin:14px 0 10px}
 
 #view-settings .card+.card{margin-top:12px}
+
+.osm-row .src{font-size:11px;font-weight:700;color:var(--muted);background:var(--card);border-radius:999px;padding:2px 8px;flex:none}

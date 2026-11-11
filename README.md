@@ -12,7 +12,7 @@ Design: warmes Beige/Braun, hell und dunkel.
   mit „Dort holen“, die Übersicht zeigt „X Artikel sind im Angebot“. Auch Ähnliches derselben Abteilung wird gemeldet
   (z. B. Penne, wenn Spaghetti im Angebot sind). Links zu den Prospekten eurer Läden, kaufDA und marktguru.
   Abgelaufene Angebote werden automatisch ausgeblendet. **„Aus Merkliste“**: Screenshot z. B. der kaufDA-Merkliste → in Fotos Text kopieren (Live Text) → einfügen; Produkte, Preise und Läden werden erkannt und nach Vorschau übernommen (auch direkt auf die Einkaufsliste). Darstellung als Karten pro Laden, Eintragen mit „+ Angebot“ direkt auf der Karte (nur Produkt + Preis).
-- **Läden:** „＋ Laden“ sucht online (OpenStreetMap) nach Name + Ort, z. B. „Müller“ in Emden, und übernimmt Adresse und Art; sonst von Hand eintragen. Löschen über ⋯ → Löschen. Startliste mit Supermärkten, Discountern und Drogerien in Emden. Suchen, Lieblingsläden per Stern ★ (stehen oben, in der Übersicht und in der Ladenauswahl), anlegen, bearbeiten, löschen.
+- **Läden:** „＋ Laden“ sucht online gleichzeitig in OpenStreetMap, Photon und – optional mit eigenem Schlüssel – Google Maps ([GOOGLE.md](GOOGLE.md)) nach Name + Ort, z. B. „Müller“ in Emden, und übernimmt Adresse und Art; sonst von Hand eintragen. Löschen über ⋯ → Löschen. Startliste mit Supermärkten, Discountern und Drogerien in Emden. Suchen, Lieblingsläden per Stern ★ (stehen oben, in der Übersicht und in der Ladenauswahl), anlegen, bearbeiten, löschen.
   „Läden in Emden suchen“ lädt weitere Geschäfte live aus OpenStreetMap (Baumarkt, Mode, Bäcker, Elektronik …).
   Jeder Laden hat seinen eigenen Laufweg (⋯ → Reihenfolge der Abteilungen mit ▲/▼).
 - **Personen:** hinzufügen, umbenennen, Farbe wählen, entfernen. „Das bin ich“ pro Gerät einstellen.

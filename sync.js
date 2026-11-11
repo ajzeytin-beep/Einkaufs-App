@@ -188,8 +188,8 @@ const Sync = (() => {
       });
       for (const id of Object.keys(sh)) if (!seen.has(id)) { delete sh[id]; ops.push({ col, id, del: true }); }
     }
-    const meta = stable({ learned: state.learned || {} });
-    if (meta !== metaShadow) { metaShadow = meta; ops.push({ meta: { learned: clean(state.learned || {}), updated: Date.now() } }); }
+    const meta = stable({ learned: state.learned || {}, settings: state.settings || {} });
+    if (meta !== metaShadow) { metaShadow = meta; ops.push({ meta: { learned: clean(state.learned || {}), settings: clean(state.settings || {}), updated: Date.now() } }); }
     return ops;
   }
   function push() {
@@ -285,8 +285,11 @@ const Sync = (() => {
       }
       unsubs.push(backend.subscribeMeta((m) => {
         if (!m) return;
-        metaShadow = stable({ learned: m.learned || {} });
-        if (stable(state.learned || {}) !== stable(m.learned || {})) { state.learned = m.learned || {}; onRemoteChange(); }
+        metaShadow = stable({ learned: m.learned || {}, settings: m.settings || {} });
+        let ch = false;
+        if (stable(state.learned || {}) !== stable(m.learned || {})) { state.learned = m.learned || {}; ch = true; }
+        if (m.settings && stable(state.settings || {}) !== stable(m.settings)) { state.settings = m.settings; ch = true; }
+        if (ch) onRemoteChange();
       }, onErr));
       setStatus('on');
       return true;

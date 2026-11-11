@@ -21,7 +21,7 @@ const DB = (() => {
   return { get: (k) => tx('readonly', (s) => s.get(k)), set: (k, v) => tx('readwrite', (s) => s.put(v, k)) };
 })();
 
-const APP_VERSION = 19; // bei jeder Änderung zusammen mit sw.js hochzählen
+const APP_VERSION = 20; // bei jeder Änderung zusammen mit sw.js hochzählen
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -42,6 +42,7 @@ function freshState() {
     items: [],
     offers: [],
     learned: {},
+    settings: {},
   };
 }
 
@@ -52,7 +53,7 @@ const save = () => { DB.set('state', state).catch((e) => toast('Speichern fehlge
 
 // Übernimmt Daten aus Version 1 (eine Liste, ein Laden)
 function migrate(old) {
-  if (old.v === 2) { old.offers ||= []; return old; }
+  if (old.v === 2) { old.offers ||= []; old.settings ||= {}; return old; }
   const s = freshState();
   if (old.categories) s.categories = old.categories;
   const edeka = s.stores.find((x) => x.name === 'Edeka Südbahnhof');
@@ -385,6 +386,18 @@ function renderSettings() {
     <header class="page-head"><div><p class="eyebrow">Einstellungen</p><h1>Mehr</h1></div></header>
     <h2 class="sec">Gemeinsam nutzen</h2>
     ${syncSection()}
+    <h2 class="sec">Laden-Suche</h2>
+    <div class="card pad stack">
+      <p class="muted">Beim Hinzufügen von Läden wird gleichzeitig gesucht in: <b>OpenStreetMap</b> ✓ · <b>Photon</b> ✓ ·
+        <b>Google Maps</b> ${state.settings?.googleKey ? '✓' : '– optional, eigener Schlüssel nötig (<a href="GOOGLE.md" target="_blank" rel="noopener">Anleitung</a>)'}</p>
+      ${state.settings?.googleKey
+        ? `<div class="row wide"><span class="tag">Google-Schlüssel hinterlegt ${esc(state.settings.googleKey.slice(0, 6))}…</span>
+           <button class="link danger" data-act="google-remove">Entfernen</button></div>`
+        : `<div class="row wide"><input id="google-key" placeholder="Google-API-Schlüssel (AIza…)" autocomplete="off" autocapitalize="off" autocorrect="off">
+           <button class="btn" data-act="google-save">Speichern</button></div>`}
+      ${Sync.code ? '<p class="muted small" style="margin:0">Wird mit eurem gemeinsamen Haushalt geteilt.</p>' : ''}
+    </div>
+
     <h2 class="sec">Abteilungen <button class="link" data-act="new-cat">+ Neu</button></h2>
     <p class="muted small">Hier legt ihr fest, welche Abteilungen es gibt. Die Reihenfolge pro Laden stellt ihr beim Laden unter „Laufweg“ ein.</p>
     <div class="card list-card">${state.categories.map((c) => `<div class="srow">
@@ -588,6 +601,7 @@ async function handleJoinLink() {
 // ================= Dialoge =================
 function dialog(html, onClose) {
   const d = $('#dlg'), f = $('#dlg-form');
+  f.onclick = f.onkeydown = f.oninput = null;   // Handler früherer Fenster entfernen
   f.innerHTML = html;
   d.returnValue = '';
   d.onclose = () => onClose(d.returnValue, new FormData(f), f);
@@ -740,7 +754,7 @@ function findStore(preset = '') {
     <button type="button" class="btn primary" data-s="go">${ICON.pin} Suchen</button>
     <div class="osm find-res"></div>
     <p class="muted small" style="margin:0">Nicht dabei? <button type="button" class="link" data-s="manual">Selbst eintragen</button></p>
-    <p class="muted small" style="margin:0">Kartendaten © OpenStreetMap-Mitwirkende</p>
+    <p class="muted small" style="margin:0">Suche: ${state.settings?.googleKey ? 'Google Maps, ' : ''}OpenStreetMap, Photon · Kartendaten © OpenStreetMap-Mitwirkende${state.settings?.googleKey ? ', Google' : ''}</p>
     <menu><span></span><button value="cancel" class="btn">Fertig</button></menu>
   `, () => { save(); render(); });
   const q = $('input[name=q]', f), ort = $('input[name=ort]', f), res = $('.find-res', f);
@@ -751,29 +765,20 @@ function findStore(preset = '') {
     try { localStorage.setItem('einkauf-ort', place); } catch { }
     res.innerHTML = '<div class="spinner"></div>';
     try {
-      const url = 'https://nominatim.openstreetmap.org/search?' + new URLSearchParams({
-        q: `${term} ${place}`.trim(), format: 'jsonv2', addressdetails: '1', limit: '15', countrycodes: 'de', 'accept-language': 'de',
-      });
-      const r = await fetch(url);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const data = await r.json();
-      const known = new Set(state.stores.map((s) => (s.name + '|' + (s.address || '')).toLowerCase()));
-      found = data.filter((d) => d.name && ['shop', 'amenity', 'craft'].includes(d.category)).map((d) => {
-        const a = d.address || {};
-        const street = [a.road, a.house_number].filter(Boolean).join(' ');
-        const town = a.city || a.town || a.village || a.municipality || '';
-        const address = [street, town && town.toLowerCase() !== place.toLowerCase() ? town : ''].filter(Boolean).join(', ');
-        return { name: d.name, address, type: OSM_TYPE[d.type] || (d.category === 'shop' ? 'sonst' : 'sonst'), added: known.has((d.name + '|' + address).toLowerCase()) };
-      }).filter((s, i, a) => a.findIndex((x) => x.name === s.name && x.address === s.address) === i);
-      res.innerHTML = found.length ? found.map((s, i) => `<button type="button" class="osm-row ${s.added ? 'added' : ''}" data-o="${i}">
-          <span>${stype(s.type).icon}</span><span class="txt"><b>${esc(s.name)}</b><small>${esc(s.address || place)}</small></span><span class="add">+</span></button>`).join('')
-        : `<p class="muted">Nichts gefunden. Anders schreiben (z. B. „Drogerie Müller“) oder <button type="button" class="link" data-s="manual">selbst eintragen</button>.</p>`;
+      const { results, errors } = await searchPlaces(term, place);
+      const known = new Set(state.stores.map((s) => fold2(s.name) + '|' + fold2((s.address || '').split(',')[0])));
+      found = results.map((s) => ({ ...s, added: known.has(fold2(s.name) + '|' + fold2((s.address || '').split(',')[0])) }));
+      res.innerHTML = (found.length ? found.map((s, i) => `<button type="button" class="osm-row ${s.added ? 'added' : ''}" data-o="${i}">
+          <span>${stype(s.type).icon}</span><span class="txt"><b>${esc(s.name)}</b><small>${esc(s.address || place)}</small></span>
+          <span class="src">${s.src}</span><span class="add">+</span></button>`).join('')
+        : `<p class="muted">Nichts gefunden. Anders schreiben (z. B. „Drogerie Müller“) oder <button type="button" class="link" data-s="manual">selbst eintragen</button>.</p>`)
+        + (errors.length ? `<p class="muted small" style="margin:4px 0 0">Nicht erreichbar: ${esc(errors.join(' · '))}</p>` : '');
     } catch (err) {
       res.innerHTML = `<p class="muted">Suche gerade nicht möglich (${esc(err.message)}). Bitte später nochmal oder <button type="button" class="link" data-s="manual">selbst eintragen</button>.</p>`;
     }
   };
-  f.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.target === q || e.target === ort)) { e.preventDefault(); search(); } });
-  f.addEventListener('click', (e) => {
+  f.onkeydown = (e) => { if (e.key === 'Enter' && (e.target === q || e.target === ort)) { e.preventDefault(); search(); } };
+  f.onclick = (e) => {
     const b = e.target.closest('[data-s],[data-o]');
     if (!b) return;
     if (b.dataset.s === 'go') return search();
@@ -783,7 +788,7 @@ function findStore(preset = '') {
     state.stores.push({ id: uid(), name: s.name, type: s.type, address: s.address, route: state.categories.map((c) => c.id), fav: true });
     s.added = true; b.classList.add('added'); save();
     toast(`★ ${s.name} hinzugefügt`);
-  });
+  };
   setTimeout(() => q.focus(), 50);
   if (preset) search();
 }
@@ -924,6 +929,13 @@ document.addEventListener('click', async (e) => {
     case 'set-me': state.me = id; save(); render(); toast(`Hallo ${member(id).name}!`); break;
     case 'fav': st.fav = !st.fav; save(); render(); toast(st.fav ? `★ ${st.name} ist jetzt Lieblingsladen` : `${st.name} ist kein Favorit mehr`); break;
     case 'new-store': findStore(); break;
+    case 'google-save': {
+      const k = $('#google-key').value.trim();
+      if (!/^AIza[\w-]{30,}$/.test(k)) return toast('Das sieht nicht wie ein Google-API-Schlüssel aus (beginnt mit AIza…)');
+      state.settings = { ...(state.settings || {}), googleKey: k }; save(); render(); toast('Google Maps eingerichtet ✓');
+      break;
+    }
+    case 'google-remove': if (confirm('Google-Schlüssel entfernen?')) { const st = { ...(state.settings || {}) }; delete st.googleKey; state.settings = st; save(); render(); } break;
     case 'find-online': { const t = ui.storeQuery; ui.storeQuery = ''; render(); findStore(t); break; }
     case 'edit-store': editStore(store(id)); break;
     case 'osm': osmSearch(); break;

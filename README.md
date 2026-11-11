@@ -27,10 +27,11 @@ Lokal: `python3 -m http.server` und `http://localhost:8000` öffnen. Fürs Handy
 und „Zum Home-Bildschirm“ hinzufügen.
 
 ## Gemeinsam nutzen (Abgleich zwischen Handys)
-Über Firebase (kostenlos): einmal einrichten, dann per **Einladungslink** beitreten. Änderungen erscheinen sofort auf
-allen Handys, offline geht alles weiter und wird später abgeglichen. Anleitung: **[FIREBASE.md](FIREBASE.md)**.
-Die Firebase-Bibliothek liegt in `vendor/firebase.js` (Firebase JS SDK 10.14.1, Apache-2.0) und wird nur geladen,
-wenn der Abgleich eingerichtet ist.
+Über **Supabase** (empfohlen, kostenlos) oder alternativ **Firebase**: einmal einrichten, dann per **Einladungslink**
+beitreten. Änderungen erscheinen sofort auf allen Handys, offline geht alles weiter und wird später abgeglichen.
+Anleitungen: **[SUPABASE.md](SUPABASE.md)** (Datenbank-Skript: `supabase.sql`) · [FIREBASE.md](FIREBASE.md) (`firestore.rules`).
+Die Bibliotheken liegen lokal in `vendor/` (supabase-js 2.45.4, MIT · Firebase JS SDK 10.14.1, Apache-2.0) und werden
+nur geladen, wenn der Abgleich eingerichtet ist.
 
 ## Hinweis
 Die Ladenadressen stammen aus öffentlichen Verzeichnissen und OpenStreetMap und können veraltet sein.

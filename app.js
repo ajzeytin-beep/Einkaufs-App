@@ -481,25 +481,26 @@ function editOffer(o) {
 function syncSection() {
   if (!Sync.hasConfig) return `<div class="card pad stack">
       <p class="muted">Damit ihr beide dieselbe Liste live auf euren Handys habt, braucht die App ein kostenloses
-        Firebase-Projekt (einmalig ca. 5 Minuten, Anleitung: <a href="FIREBASE.md" target="_blank" rel="noopener">FIREBASE.md</a>).
-        Danach hier die Konfiguration aus der Firebase-Konsole einfügen.</p>
-      <textarea id="fb-config" rows="6" placeholder='const firebaseConfig = {\n  apiKey: "AIza…",\n  authDomain: "…",\n  projectId: "…",\n  appId: "…"\n};'></textarea>
+        <b>Supabase</b>-Projekt (einmalig ca. 5 Minuten, Anleitung: <a href="SUPABASE.md" target="_blank" rel="noopener">SUPABASE.md</a>).
+        Danach hier <b>Project URL</b> und <b>anon/publishable Key</b> einfügen.</p>
+      <textarea id="fb-config" rows="4" placeholder="https://abcdefgh.supabase.co&#10;eyJhbGciOiJIUzI1NiIsInR5cCI6…"></textarea>
+      <p class="muted small" style="margin:0">Lieber Firebase? Dann hier den <code>firebaseConfig</code>-Block einfügen (<a href="FIREBASE.md" target="_blank" rel="noopener">FIREBASE.md</a>).</p>
       <button class="btn primary" data-act="sync-config">Konfiguration speichern</button>
     </div>`;
   if (!Sync.code) return `<div class="card pad stack">
       ${syncPill()}
-      <p class="muted">Firebase ist eingerichtet. Startet jetzt einen gemeinsamen Haushalt – oder tretet mit dem Code
+      <p class="muted">${Sync.provider === 'supabase' ? 'Supabase' : 'Firebase'} ist eingerichtet. Startet jetzt einen gemeinsamen Haushalt – oder tretet mit dem Code
         des anderen Handys bei.</p>
       <button class="btn primary" data-act="sync-create">Gemeinsamen Haushalt starten</button>
       <div class="row wide"><input id="join-code" placeholder="Code, z. B. ABCD-EFGH-…" autocapitalize="characters">
         <button class="btn" data-act="sync-join">Beitreten</button></div>
-      ${Sync.configFromFile ? '' : '<button class="link" data-act="sync-forget">Firebase-Konfiguration entfernen</button>'}
+      ${Sync.configFromFile ? '' : '<button class="link" data-act="sync-forget">Zugangsdaten entfernen</button>'}
     </div>`;
   return `<div class="card pad stack">
       ${syncPill()}
       ${Sync.status === 'error' ? `<p class="err">${esc(Sync.error)}</p>` : ''}
       <p class="muted">Alle Änderungen erscheinen sofort auf allen verbundenen Handys. Ohne Netz geht alles weiter und wird
-        später abgeglichen.</p>
+        später abgeglichen. Server: ${Sync.provider === 'supabase' ? 'Supabase' : 'Firebase'}.</p>
       <div><p class="eyebrow">Haushalts-Code</p><p class="code">${esc(Sync.fmtCode)}</p></div>
       <button class="btn primary" data-act="sync-share">Einladung teilen</button>
       <p class="muted small" style="margin:0">Der Code ist wie ein Schlüssel: Wer ihn hat, sieht und ändert eure Liste. Nur an Familie weitergeben.</p>
@@ -530,7 +531,7 @@ async function handleJoinLink() {
   history.replaceState(null, '', location.pathname + location.search);
   let conf = null;
   if (h.get('cfg')) { try { conf = JSON.parse(decodeURIComponent(escape(atob(h.get('cfg'))))); } catch { } }
-  if (!conf && !Sync.hasConfig) return toast('Einladung ungültig: Firebase-Konfiguration fehlt.');
+  if (!conf && !Sync.hasConfig) return toast('Einladung ungültig: Zugangsdaten fehlen.');
   if (Sync.code === code.toLowerCase()) return toast('Schon verbunden ✓');
   const local = state.items.length;
   if (!confirm(`Der gemeinsamen Einkaufsliste beitreten?${local ? `\n\nDie ${local} Artikel auf diesem Gerät werden durch die gemeinsame Liste ersetzt.` : ''}`)) return;
@@ -813,8 +814,8 @@ document.addEventListener('click', async (e) => {
     }
     case 'reset': if (confirm(Sync.code ? 'Wirklich alles löschen? Das löscht die Liste auch auf allen verbundenen Handys!' : 'Wirklich alles löschen und neu anfangen?')) { const me = state.me; state = freshState(); if (Sync.code) state.me = me; save(); render(); } break;
     case 'sync-config':
-      try { await Sync.saveConfig($('#fb-config').value); toast('Firebase eingerichtet ✓'); render(); }
-      catch (err) { toast('Das sieht nicht nach einer Firebase-Konfiguration aus: ' + err.message); }
+      try { await Sync.saveConfig($('#fb-config').value); toast((Sync.provider === 'supabase' ? 'Supabase' : 'Firebase') + ' eingerichtet ✓'); render(); }
+      catch (err) { toast('Das passt noch nicht: ' + err.message); }
       break;
     case 'sync-forget': await Sync.disconnect(true); render(); break;
     case 'sync-create':

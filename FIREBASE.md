@@ -1,4 +1,4 @@
-# Gemeinsamer Abgleich einrichten (Firebase, kostenlos)
+# Gemeinsamer Abgleich mit Firebase einrichten (Alternative zu Supabase)
 
 Einmalig ca. 5 Minuten. Danach seht ihr beide dieselbe Liste live auf euren Handys.
 Der kostenlose „Spark“-Tarif reicht für eine Familie bei Weitem – es wird **keine Kreditkarte** benötigt.
@@ -27,8 +27,8 @@ Der kostenlose „Spark“-Tarif reicht für eine Familie bei Weitem – es wird
 „Konfiguration speichern“ → **„Gemeinsamen Haushalt starten“** → **„Einladung teilen“** und den Link
 z. B. per WhatsApp an deine Frau schicken. Sie öffnet den Link, bestätigt – fertig.
 
-**Variante B (für alle Geräte fest eingebaut):** Die Werte in `firebase-config.js` eintragen
-(`window.FIREBASE_CONFIG = { … }`), committen und veröffentlichen. Dann muss auf keinem Gerät etwas eingefügt werden.
+**Variante B (für alle Geräte fest eingebaut):** Die Werte in `sync-config.js` eintragen
+(`window.SYNC_CONFIG = { provider: "firebase", apiKey: …, authDomain: …, projectId: …, appId: … }`), committen und veröffentlichen. Dann muss auf keinem Gerät etwas eingefügt werden.
 
 ## Sicherheit
 - Die Firebase-Konfiguration ist **kein Geheimnis** – sie steht in jeder Firebase-Web-App.

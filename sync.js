@@ -147,6 +147,8 @@ const Sync = (() => {
       });
     window.addEventListener('online', fullRefresh);
     document.addEventListener('visibilitychange', onVisible);
+    // Sicherheitsnetz, falls eine Live-Meldung verloren geht: jede Minute nachladen, solange die App offen ist
+    const poll = setInterval(() => { if (document.visibilityState === 'visible') fullRefresh(); }, 60000);
 
     return {
       async exists() { return check(await sb.from(T).select('id').eq('hid', hid).eq('col', 'meta').limit(1)).length > 0; },
@@ -164,6 +166,7 @@ const Sync = (() => {
       },
       close() {
         sb.removeChannel(channel);
+        clearInterval(poll);
         window.removeEventListener('online', fullRefresh);
         document.removeEventListener('visibilitychange', onVisible);
       },

@@ -30,7 +30,7 @@ und „Zum Home-Bildschirm“ hinzufügen.
 Über **Supabase** (empfohlen, kostenlos) oder alternativ **Firebase**: einmal einrichten, dann per **Einladungslink**
 beitreten. Änderungen erscheinen sofort auf allen Handys, offline geht alles weiter und wird später abgeglichen.
 Anleitungen: **[SUPABASE.md](SUPABASE.md)** (Datenbank-Skript: `supabase.sql`) · [FIREBASE.md](FIREBASE.md) (`firestore.rules`).
-Die Bibliotheken liegen lokal in `vendor/` (supabase-js 2.45.4, MIT · Firebase JS SDK 10.14.1, Apache-2.0) und werden
+Die Bibliotheken liegen lokal in `vendor/` (supabase-js 2.118.0, MIT · Firebase JS SDK 10.14.1, Apache-2.0) und werden
 nur geladen, wenn der Abgleich eingerichtet ist.
 
 ## Hinweis

@@ -21,7 +21,7 @@ const DB = (() => {
   return { get: (k) => tx('readonly', (s) => s.get(k)), set: (k, v) => tx('readwrite', (s) => s.put(v, k)) };
 })();
 
-const APP_VERSION = 17; // bei jeder Änderung zusammen mit sw.js hochzählen
+const APP_VERSION = 18; // bei jeder Änderung zusammen mit sw.js hochzählen
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -636,9 +636,9 @@ function editItem(it) {
   drawPhoto();
 }
 
-function editStore(s) {
+function editStore(s, presetName = '') {
   const isNew = !s;
-  s ||= { id: uid(), name: '', type: 'supermarkt', address: '', route: state.categories.map((c) => c.id), fav: true };
+  s ||= { id: uid(), name: presetName, type: 'supermarkt', address: '', route: state.categories.map((c) => c.id), fav: true };
   let route = routeOf(s);
   const f = dialog(`
     <h3>${isNew ? 'Neuer Laden' : 'Laden bearbeiten'}</h3>
@@ -726,6 +726,66 @@ function editCat(c) {
 }
 
 // Läden live aus OpenStreetMap laden (läuft auf eurem Gerät)
+// Einzelnen Laden online suchen (OpenStreetMap / Nominatim) und hinzufügen
+function findStore() {
+  let lastOrt = 'Emden';
+  try { lastOrt = localStorage.getItem('einkauf-ort') || 'Emden'; } catch { }
+  const f = dialog(`
+    <h3>Laden hinzufügen</h3>
+    <div class="two wide-first">
+      <label>Welcher Laden?<input name="q" placeholder="z. B. Müller, Bäckerei, Fressnapf" autocomplete="off" enterkeyhint="search"></label>
+      <label>Ort<input name="ort" value="${esc(lastOrt)}" autocomplete="off"></label>
+    </div>
+    <button type="button" class="btn primary" data-s="go">${ICON.pin} Suchen</button>
+    <div class="osm find-res"></div>
+    <p class="muted small" style="margin:0">Nicht dabei? <button type="button" class="link" data-s="manual">Selbst eintragen</button></p>
+    <p class="muted small" style="margin:0">Kartendaten © OpenStreetMap-Mitwirkende</p>
+    <menu><span></span><button value="cancel" class="btn">Fertig</button></menu>
+  `, () => { save(); render(); });
+  const q = $('input[name=q]', f), ort = $('input[name=ort]', f), res = $('.find-res', f);
+  let found = [];
+  const search = async () => {
+    const term = q.value.trim(), place = ort.value.trim();
+    if (!term) { q.focus(); return; }
+    try { localStorage.setItem('einkauf-ort', place); } catch { }
+    res.innerHTML = '<div class="spinner"></div>';
+    try {
+      const url = 'https://nominatim.openstreetmap.org/search?' + new URLSearchParams({
+        q: `${term} ${place}`.trim(), format: 'jsonv2', addressdetails: '1', limit: '15', countrycodes: 'de', 'accept-language': 'de',
+      });
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const known = new Set(state.stores.map((s) => (s.name + '|' + (s.address || '')).toLowerCase()));
+      found = data.filter((d) => d.name && ['shop', 'amenity', 'craft'].includes(d.category)).map((d) => {
+        const a = d.address || {};
+        const street = [a.road, a.house_number].filter(Boolean).join(' ');
+        const town = a.city || a.town || a.village || a.municipality || '';
+        const address = [street, town && town.toLowerCase() !== place.toLowerCase() ? town : ''].filter(Boolean).join(', ');
+        return { name: d.name, address, type: OSM_TYPE[d.type] || (d.category === 'shop' ? 'sonst' : 'sonst'), added: known.has((d.name + '|' + address).toLowerCase()) };
+      }).filter((s, i, a) => a.findIndex((x) => x.name === s.name && x.address === s.address) === i);
+      res.innerHTML = found.length ? found.map((s, i) => `<button type="button" class="osm-row ${s.added ? 'added' : ''}" data-o="${i}">
+          <span>${stype(s.type).icon}</span><span class="txt"><b>${esc(s.name)}</b><small>${esc(s.address || place)}</small></span><span class="add">+</span></button>`).join('')
+        : `<p class="muted">Nichts gefunden. Anders schreiben (z. B. „Drogerie Müller“) oder <button type="button" class="link" data-s="manual">selbst eintragen</button>.</p>`;
+    } catch (err) {
+      res.innerHTML = `<p class="muted">Suche gerade nicht möglich (${esc(err.message)}). Bitte später nochmal oder <button type="button" class="link" data-s="manual">selbst eintragen</button>.</p>`;
+    }
+  };
+  f.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.target === q || e.target === ort)) { e.preventDefault(); search(); } });
+  f.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-s],[data-o]');
+    if (!b) return;
+    if (b.dataset.s === 'go') return search();
+    if (b.dataset.s === 'manual') { $('#dlg').close(); setTimeout(() => editStore(null, q.value.trim()), 50); return; }
+    const s = found[+b.dataset.o];
+    if (!s || b.classList.contains('added')) return;
+    state.stores.push({ id: uid(), name: s.name, type: s.type, address: s.address, route: state.categories.map((c) => c.id), fav: true });
+    s.added = true; b.classList.add('added'); save();
+    toast(`★ ${s.name} hinzugefügt`);
+  });
+  setTimeout(() => q.focus(), 50);
+}
+
 async function osmSearch() {
   const f = dialog(`<h3>Läden in Emden</h3><p class="muted">Suche in OpenStreetMap …</p><div class="osm"><div class="spinner"></div></div>
     <menu><span></span><button value="cancel" class="btn">Schließen</button></menu>`, () => { save(); render(); });
@@ -846,7 +906,7 @@ document.addEventListener('click', async (e) => {
     case 'switch-me': go('people'); break;
     case 'set-me': state.me = id; save(); render(); toast(`Hallo ${member(id).name}!`); break;
     case 'fav': st.fav = !st.fav; save(); render(); toast(st.fav ? `★ ${st.name} ist jetzt Lieblingsladen` : `${st.name} ist kein Favorit mehr`); break;
-    case 'new-store': editStore(); break;
+    case 'new-store': findStore(); break;
     case 'edit-store': editStore(store(id)); break;
     case 'osm': osmSearch(); break;
     case 'new-member': editMember(); break;

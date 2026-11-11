@@ -42,5 +42,5 @@ const OSM_TYPE = {
   doityourself: 'baumarkt', hardware: 'baumarkt', garden_centre: 'baumarkt',
   clothes: 'mode', shoes: 'mode', electronics: 'technik', mobile_phone: 'technik', computer: 'technik',
   furniture: 'wohnen', household: 'wohnen', houseware: 'wohnen', variety_store: 'wohnen',
-  department_store: 'center', mall: 'center', pet: 'sonst', books: 'sonst', toys: 'sonst', sports: 'sonst',
+  department_store: 'center', mall: 'center', supermarket_chain: 'supermarkt', bakery_shop: 'baecker', confectionery: 'baecker', pastry: 'baecker', alcohol: 'getraenke', wine: 'getraenke', perfumery: 'drogerie', pharmacy: 'drogerie', marketplace: 'markt', deli: 'markt', butcher_shop: 'metzger', bed: 'wohnen', kitchen: 'wohnen', interior_decoration: 'wohnen', clothing: 'mode', fashion_accessories: 'mode', bag: 'mode', jewelry: 'mode', optician: 'sonst', florist: 'sonst', stationery: 'sonst', gift: 'sonst', toys: 'sonst', pet: 'sonst', books: 'sonst', toys: 'sonst', sports: 'sonst',
 };

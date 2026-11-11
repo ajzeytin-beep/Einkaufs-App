@@ -324,7 +324,7 @@ const Sync = (() => {
     inviteLink() {
       const u = new URL(location.href); u.hash = '';
       let h = 'join=' + cfg.hid;
-      if (!window.SYNC_CONFIG && cfg.config) h += '&cfg=' + btoa(unescape(encodeURIComponent(JSON.stringify(cfg.config)))).replace(/=+$/, '');
+      if (!window.SYNC_CONFIG && cfg.config) h += '&cfg=' + btoa(unescape(encodeURIComponent(JSON.stringify(cfg.config)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); // URL-sicher (base64url)
       return u.toString() + '#' + h;
     },
     async disconnect(forgetConfig = false) {

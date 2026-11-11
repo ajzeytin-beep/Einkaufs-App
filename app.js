@@ -21,7 +21,7 @@ const DB = (() => {
   return { get: (k) => tx('readonly', (s) => s.get(k)), set: (k, v) => tx('readwrite', (s) => s.put(v, k)) };
 })();
 
-const APP_VERSION = 13; // bei jeder Änderung zusammen mit sw.js hochzählen
+const APP_VERSION = 14; // bei jeder Änderung zusammen mit sw.js hochzählen
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -493,8 +493,20 @@ function editOffer(o, presetStore) {
   });
 }
 
+function joinBlock(title) {
+  return `<div class="card pad stack join-card">
+      <h3>${title}</h3>
+      <p class="muted">Den Einladungslink (z. B. aus WhatsApp) <b>kopieren</b> und hier einfügen – fertig.</p>
+      <div class="row wide"><input id="join-code" placeholder="Einladungslink oder Code" autocapitalize="off" autocorrect="off">
+        <button class="btn primary" data-act="sync-join">Beitreten</button></div>
+      <button class="link" data-act="sync-join-paste">📋 Aus Zwischenablage einfügen &amp; beitreten</button>
+    </div>`;
+}
+
 function syncSection() {
-  if (!Sync.hasConfig) return `<div class="card pad stack">
+  if (!Sync.hasConfig) return joinBlock('Einladung bekommen?') + `
+    <p class="small muted sync-or">— oder selbst einen neuen gemeinsamen Haushalt einrichten: —</p>
+    <div class="card pad stack">
       <p class="muted">Damit ihr beide dieselbe Liste live auf euren Handys habt, braucht die App ein kostenloses
         <b>Supabase</b>-Projekt (einmalig ca. 5 Minuten, Anleitung: <a href="SUPABASE.md" target="_blank" rel="noopener">SUPABASE.md</a>).
         Danach hier <b>Project URL</b> und <b>anon/publishable Key</b> einfügen.</p>
@@ -507,8 +519,9 @@ function syncSection() {
       <p class="muted">${Sync.provider === 'supabase' ? 'Supabase' : 'Firebase'} ist eingerichtet. Startet jetzt einen gemeinsamen Haushalt – oder tretet mit dem Code
         des anderen Handys bei.</p>
       <button class="btn primary" data-act="sync-create">Gemeinsamen Haushalt starten</button>
-      <div class="row wide"><input id="join-code" placeholder="Code, z. B. ABCD-EFGH-…" autocapitalize="characters">
-        <button class="btn" data-act="sync-join">Beitreten</button></div>
+    </div>
+    ${joinBlock('Oder: Einladung eines anderen Handys annehmen')}
+    <div class="card pad stack" style="margin-top:12px">
       ${Sync.configFromFile ? '' : '<button class="link" data-act="sync-forget">Zugangsdaten entfernen</button>'}
     </div>`;
   return `<div class="card pad stack">
@@ -517,7 +530,10 @@ function syncSection() {
       <p class="muted">Alle Änderungen erscheinen sofort auf allen verbundenen Handys. Ohne Netz geht alles weiter und wird
         später abgeglichen. Server: ${Sync.provider === 'supabase' ? 'Supabase' : 'Firebase'}.</p>
       <div><p class="eyebrow">Haushalts-Code</p><p class="code">${esc(Sync.fmtCode)}</p></div>
-      <button class="btn primary" data-act="sync-share">Einladung teilen</button>
+      <div class="row wide"><button class="btn primary" data-act="sync-share">Einladung teilen</button>
+        <button class="btn" data-act="sync-copy">Link kopieren</button></div>
+      <p class="muted small" style="margin:0">Auf dem anderen Handy: Link öffnen → in Safari <b>Teilen → Zum Home-Bildschirm</b> →
+        App vom Home-Bildschirm öffnen → <b>Mehr</b> → Link einfügen → <b>Beitreten</b>.</p>
       <p class="muted small" style="margin:0">Der Code ist wie ein Schlüssel: Wer ihn hat, sieht und ändert eure Liste. Nur an Familie weitergeben.</p>
       <button class="link danger" data-act="sync-leave">Auf diesem Gerät trennen</button>
     </div>`;
@@ -539,23 +555,37 @@ function askWhoAmI() {
   });
 }
 
-async function handleJoinLink() {
-  const h = new URLSearchParams(location.hash.slice(1));
-  const code = h.get('join');
-  if (!code) return;
-  history.replaceState(null, '', location.pathname + location.search);
+// Liest eine Einladung aus einem Link ("…#join=CODE&cfg=…") oder einem reinen Code
+function parseInvite(text) {
+  text = String(text || '').trim();
+  const i = text.indexOf('join=');
+  if (i < 0) return { code: text, conf: null };
+  const h = new URLSearchParams(text.slice(text.lastIndexOf('#', i) >= 0 ? text.lastIndexOf('#', i) + 1 : i));
   let conf = null;
-  if (h.get('cfg')) { try { conf = JSON.parse(decodeURIComponent(escape(atob(h.get('cfg'))))); } catch { } }
-  if (!conf && !Sync.hasConfig) return toast('Einladung ungültig: Zugangsdaten fehlen.');
-  if (Sync.code === code.toLowerCase()) return toast('Schon verbunden ✓');
+  const cfg = h.get('cfg');
+  if (cfg) { try { conf = JSON.parse(decodeURIComponent(escape(atob(cfg.replace(/ /g, '+').replace(/-/g, '+').replace(/_/g, '/'))))); } catch { } }
+  return { code: h.get('join') || '', conf };
+}
+
+async function joinFromInvite(text, fromLink) {
+  const { code, conf } = parseInvite(text);
+  if (!code) return toast('Bitte den Einladungslink oder Code einfügen');
+  if (!conf && !Sync.hasConfig) return toast('Bitte den ganzen Einladungslink einfügen (nicht nur den Code).');
+  if (Sync.code === code.toLowerCase().replace(/[^a-z0-9]/g, '')) return toast('Schon verbunden ✓');
   const local = state.items.length;
-  if (!confirm(`Der gemeinsamen Einkaufsliste beitreten?${local ? `\n\nDie ${local} Artikel auf diesem Gerät werden durch die gemeinsame Liste ersetzt.` : ''}`)) return;
+  if (local && !confirm(`Der gemeinsamen Einkaufsliste beitreten?\n\nDie ${local} Artikel auf diesem Gerät werden durch die gemeinsame Liste ersetzt.`)) return;
   if (await runSync('Verbinde', () => Sync.join(code, conf))) {
     toast('Verbunden ✓');
     setTimeout(askWhoAmI, 1200);
   }
 }
 
+async function handleJoinLink() {
+  if (!location.hash.includes('join=')) return;
+  const link = location.hash;
+  history.replaceState(null, '', location.pathname + location.search);
+  return joinFromInvite(link, true);
+}
 // ================= Dialoge =================
 function dialog(html, onClose) {
   const d = $('#dlg'), f = $('#dlg-form');
@@ -850,11 +880,15 @@ document.addEventListener('click', async (e) => {
     case 'sync-create':
       if (await runSync('Haushalt wird angelegt', () => Sync.create())) toast('Gemeinsamer Haushalt gestartet ✓ Jetzt die Einladung teilen.');
       break;
-    case 'sync-join': {
-      const code = $('#join-code').value.trim();
-      if (!code) return toast('Bitte den Code eingeben');
-      if (state.items.length && !confirm('Die Liste auf diesem Gerät wird durch die gemeinsame Liste ersetzt. Weiter?')) return;
-      if (await runSync('Verbinde', () => Sync.join(code))) { toast('Verbunden ✓'); setTimeout(askWhoAmI, 1200); }
+    case 'sync-join': await joinFromInvite($('#join-code').value); break;
+    case 'sync-join-paste': {
+      try { const t = await navigator.clipboard.readText(); $('#join-code').value = t; await joinFromInvite(t); }
+      catch { $('#join-code').focus(); toast('Bitte ins Feld tippen und „Einfügen“ wählen'); }
+      break;
+    }
+    case 'sync-copy': {
+      const url = Sync.inviteLink();
+      try { await navigator.clipboard.writeText(url); toast('Einladungslink kopiert ✓'); } catch { prompt('Diesen Link kopieren:', url); }
       break;
     }
     case 'sync-share': {

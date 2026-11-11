@@ -21,7 +21,7 @@ const DB = (() => {
   return { get: (k) => tx('readonly', (s) => s.get(k)), set: (k, v) => tx('readwrite', (s) => s.put(v, k)) };
 })();
 
-const APP_VERSION = 14; // bei jeder Änderung zusammen mit sw.js hochzählen
+const APP_VERSION = 15; // bei jeder Änderung zusammen mit sw.js hochzählen
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -918,6 +918,7 @@ function go(view) { ui.view = view; render(); window.scrollTo({ top: 0 }); }
 (async () => {
   try { const saved = await DB.get('state'); if (saved) state = migrate(saved); } catch (e) { console.warn(e); }
   render();
+  try { navigator.storage?.persist?.(); } catch { } // Speicher dauerhaft behalten (iOS räumt sonst evtl. auf)
   await Sync.init();
   document.addEventListener('sync-status', () => { if (ui.view === 'dash' || ui.view === 'settings') render(); });
   handleJoinLink();

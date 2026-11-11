@@ -420,7 +420,10 @@ function renderOffers() {
   const link = (s) => { const k = s?.name.toLowerCase().split(/\s+/)[0]; return CHAIN_LINKS.find(([c]) => c === k); };
   $('#view-offers').innerHTML = `
     <header class="page-head"><div><p class="eyebrow">${act.length ? act.length + ' Angebote diese Woche' : 'Diese Woche'}</p><h1>Angebote</h1></div>
-      <button class="btn primary" data-act="import">${ICON.paste} Aus Merkliste</button></header>
+      <div class="head-actions">
+        <a class="btn" href="https://www.marktguru.de" target="_blank" rel="noopener">marktguru ↗</a>
+        <button class="btn primary" data-act="import">${ICON.paste} Aus Merkliste</button>
+      </div></header>
     <div class="offer-grid">
       ${cards.map(({ s, list }) => {
         const l = link(s);

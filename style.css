@@ -267,3 +267,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 .imp-row input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);padding:0}
 .imp-row.off{opacity:.45}
 @media (max-width:520px){.imp-row{grid-template-columns:26px 1fr 72px;background:var(--bg);padding:8px;border-radius:14px}.imp-row select{grid-column:2/4}}
+
+.head-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.head-actions a{text-decoration:none}
+.howto a{color:var(--accent-d)}
+@media (max-width:520px){#view-offers .page-head{flex-wrap:wrap;align-items:flex-start}#view-offers .head-actions{width:100%;justify-content:flex-start}}

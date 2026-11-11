@@ -104,7 +104,8 @@ function openImport() {
   const f = dialog(`
     <h3>Aus Merkliste einfügen</h3>
     <ol class="howto">
-      <li>Screenshot deiner Merkliste machen und in <b>Fotos</b> öffnen.</li>
+      <li><a href="https://www.marktguru.de" target="_blank" rel="noopener"><b>marktguru öffnen ↗</b></a>, Merkliste aufrufen und einen <b>Screenshot</b> machen.</li>
+      <li>Den Screenshot in <b>Fotos</b> öffnen.</li>
       <li>Unten rechts das <b>Text-Symbol</b> tippen → <b>Alles auswählen</b> → <b>Kopieren</b>.</li>
       <li>Hier einfügen:</li>
     </ol>

@@ -21,6 +21,7 @@ const DB = (() => {
   return { get: (k) => tx('readonly', (s) => s.get(k)), set: (k, v) => tx('readwrite', (s) => s.put(v, k)) };
 })();
 
+const APP_VERSION = 13; // bei jeder Änderung zusammen mit sw.js hochzählen
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -395,6 +396,7 @@ function renderSettings() {
       <button class="btn" data-act="import">Sicherung einspielen</button>
       <button class="btn danger" data-act="reset">Alles zurücksetzen</button>
     </div>
+    <p class="small muted">App-Version ${APP_VERSION}</p>
   `;
 }
 
@@ -421,7 +423,7 @@ function renderOffers() {
   $('#view-offers').innerHTML = `
     <header class="page-head"><div><p class="eyebrow">${act.length ? act.length + ' Angebote diese Woche' : 'Diese Woche'}</p><h1>Angebote</h1></div>
       <div class="head-actions">
-        <a class="btn" href="https://www.marktguru.de" target="_blank" rel="noopener">marktguru ↗</a>
+        <a class="btn" href="https://www.kaufda.de" target="_blank" rel="noopener">kaufDA ↗</a>
         <button class="btn primary" data-act="import">${ICON.paste} Aus Merkliste</button>
       </div></header>
     <div class="offer-grid">
@@ -886,5 +888,5 @@ function go(view) { ui.view = view; render(); window.scrollTo({ top: 0 }); }
   document.addEventListener('sync-status', () => { if (ui.view === 'dash' || ui.view === 'settings') render(); });
   handleJoinLink();
   window.addEventListener('hashchange', handleJoinLink);
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 })();

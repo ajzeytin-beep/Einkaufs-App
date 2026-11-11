@@ -15,7 +15,7 @@ const CHAINS = [
   ['hagebau', 'hagebau', 'baumarkt'], ['bauhaus', 'Bauhaus', 'baumarkt'], ['mediamarkt', 'MediaMarkt', 'technik'], ['media markt', 'MediaMarkt', 'technik'],
   ['saturn', 'Saturn', 'technik'], ['tedi', 'TEDi', 'wohnen'], ['kik', 'KiK', 'mode'], ['woolworth', 'Woolworth', 'wohnen'],
 ];
-const NOISE = /^(merkliste|einkaufsliste|angebote?|prospekte?|alle|bearbeiten|teilen|fertig|zurück|filter|sortieren|heute|morgen|neu|top|deals?|coupons?|cashback|mehr|weniger|details?|zum angebot|zum prospekt|online|in der filiale|filiale|markt|nur online|app[- ]?preis|mit app|marktguru|gültig.*|noch \d+ tage?.*|\d+ tage?.*|ab (mo|di|mi|do|fr|sa|so).*|bis (mo|di|mi|do|fr|sa|so).*|(mo|di|mi|do|fr|sa|so)[.,]? \d.*|\d+\s*artikel|\d+\s*angebote?|\d{1,2}:\d{2}.*|lte|5g|wlan)$/i;
+const NOISE = /^(merkliste|merkzettel|einkaufszettel|mein einkaufszettel|meine merkliste|einkaufsliste|kaufda|kauf da|angebote?|prospekte?|alle|bearbeiten|teilen|fertig|zurück|filter|sortieren|heute|morgen|neu|top|deals?|coupons?|cashback|mehr|weniger|details?|zum angebot|zum prospekt|online|in der filiale|filiale|markt|nur online|app[- ]?preis|mit app|marktguru|kaufda|gültig.*|noch \d+ tage?.*|\d+ tage?.*|ab (mo|di|mi|do|fr|sa|so).*|bis (mo|di|mi|do|fr|sa|so).*|(mo|di|mi|do|fr|sa|so)[.,]? \d.*|\d+\s*artikel|\d+\s*angebote?|\d{1,2}:\d{2}.*|lte|5g|wlan)$/i;
 const PRICE_RE = /(\d{1,4})[.,](\d{2})(?!\d)\s*(€|eur)?|(\d{1,4})\s*€/i;
 const EXTRA_PRICE = /(uvp|statt|vorher|grundpreis|\/\s*(kg|l|100\s*g|100\s*ml|stk)|je\s*(kg|l|100)|1\s*(kg|l)\s*=|kg-preis|l-preis|preis pro)/i;
 const SIZE_RE = /^(je\s+)?(ca\.\s*)?\d+([.,]\d+)?\s*(-|x|×)?\s*(\d+([.,]\d+)?\s*)?(g|kg|ml|l|cl|stk|st\.?|stück|er|rollen|tabs|wl|pack|packung|dose|flasche|fl\.)\b.*$/i;
@@ -104,7 +104,7 @@ function openImport() {
   const f = dialog(`
     <h3>Aus Merkliste einfügen</h3>
     <ol class="howto">
-      <li><a href="https://www.marktguru.de" target="_blank" rel="noopener"><b>marktguru öffnen ↗</b></a>, Merkliste aufrufen und einen <b>Screenshot</b> machen.</li>
+      <li><a href="https://www.kaufda.de" target="_blank" rel="noopener"><b>kaufDA öffnen ↗</b></a>, deine Merkliste / deinen Einkaufszettel aufrufen und einen <b>Screenshot</b> machen.</li>
       <li>Den Screenshot in <b>Fotos</b> öffnen.</li>
       <li>Unten rechts das <b>Text-Symbol</b> tippen → <b>Alles auswählen</b> → <b>Kopieren</b>.</li>
       <li>Hier einfügen:</li>

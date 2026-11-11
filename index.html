@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f7a3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Einkauf">
+<title>Einkaufsliste</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🛒 Einkaufsliste</h1>
+  <nav>
+    <button data-view="list" class="active">Liste</button>
+    <button data-view="route">Laufweg</button>
+  </nav>
+</header>
+
+<main>
+  <section id="view-list">
+    <form id="add-form" autocomplete="off">
+      <input id="add-name" placeholder="z. B. Tomaten, Käse …" required>
+      <label class="photo-btn" title="Foto anhängen">📷
+        <input id="add-photo" type="file" accept="image/*" capture="environment" hidden>
+      </label>
+      <button type="submit">+</button>
+    </form>
+    <div id="add-preview" hidden></div>
+    <div id="list"></div>
+    <div id="done-wrap" hidden>
+      <h2>Im Wagen ✔ <button id="clear-done" class="link">Erledigte löschen</button></h2>
+      <div id="done"></div>
+    </div>
+    <p id="empty" class="hint">Noch nichts auf der Liste. Einfach oben etwas eintragen.</p>
+  </section>
+
+  <section id="view-route" hidden>
+    <p class="hint">Bringt die Abteilungen in die Reihenfolge, in der ihr durch den Laden geht.
+      Dann ist die Liste immer vom Eingang bis zur Kasse sortiert.</p>
+    <label class="store">Laden: <input id="store-name"></label>
+    <ol id="route"></ol>
+    <form id="add-cat"><input id="add-cat-name" placeholder="Neue Abteilung …" required><button>+</button></form>
+  </section>
+</main>
+
+<dialog id="item-dialog">
+  <form method="dialog" id="item-form">
+    <h3>Artikel bearbeiten</h3>
+    <label>Name <input id="d-name" required></label>
+    <label>Menge / Notiz <input id="d-note" placeholder="z. B. 500 g, die rote Packung"></label>
+    <label>Abteilung <select id="d-cat"></select></label>
+    <div id="d-photo"></div>
+    <label class="photo-btn wide">📷 Foto ändern
+      <input id="d-photo-input" type="file" accept="image/*" hidden></label>
+    <menu>
+      <button value="delete" class="danger">Löschen</button>
+      <button value="cancel">Abbrechen</button>
+      <button value="save" class="primary">Speichern</button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog id="photo-dialog"><img id="photo-big" alt=""><form method="dialog"><button>Schließen</button></form></dialog>
+
+<script src="categories.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

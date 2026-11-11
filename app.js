@@ -21,7 +21,7 @@ const DB = (() => {
   return { get: (k) => tx('readonly', (s) => s.get(k)), set: (k, v) => tx('readwrite', (s) => s.put(v, k)) };
 })();
 
-const APP_VERSION = 18; // bei jeder Änderung zusammen mit sw.js hochzählen
+const APP_VERSION = 19; // bei jeder Änderung zusammen mit sw.js hochzählen
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -337,7 +337,7 @@ function renderStores() {
     <header class="page-head"><div><p class="eyebrow">${state.stores.length} Läden · ${state.stores.filter((s) => s.fav).length} Favoriten</p><h1>Läden</h1></div>
       <button class="btn primary" data-act="new-store">${ICON.plus} Laden</button></header>
     <div class="toolbar">
-      <input class="search" placeholder="Laden suchen …" value="${esc(ui.storeQuery)}" data-input="storeQuery">
+      <input class="search" placeholder="In meinen Läden suchen …" value="${esc(ui.storeQuery)}" data-input="storeQuery">
       <button class="btn" data-act="osm">${ICON.pin} Läden in Emden suchen</button>
     </div>
     <div class="chips" data-filter="storeType">
@@ -355,7 +355,8 @@ function renderStores() {
         ${n ? `<span class="badge">${n}</span>` : ''}
         <button class="more" data-act="edit-store" data-id="${s.id}" aria-label="bearbeiten">⋯</button>
       </div>`;
-    }).join('')}</div>`).join('') || (ui.storeType === 'fav' ? '' : '<div class="empty card"><p class="muted">Kein Laden gefunden.</p></div>')}
+    }).join('')}</div>`).join('') || (ui.storeType === 'fav' ? '' : `<div class="empty card"><p class="muted">„${esc(ui.storeQuery)}“ ist noch nicht in deinen Läden.</p>
+      <p><button class="btn primary" data-act="find-online">${ICON.pin} „${esc(ui.storeQuery)}“ online suchen &amp; hinzufügen</button></p></div>`)}
   `;
 }
 
@@ -727,13 +728,13 @@ function editCat(c) {
 
 // Läden live aus OpenStreetMap laden (läuft auf eurem Gerät)
 // Einzelnen Laden online suchen (OpenStreetMap / Nominatim) und hinzufügen
-function findStore() {
+function findStore(preset = '') {
   let lastOrt = 'Emden';
   try { lastOrt = localStorage.getItem('einkauf-ort') || 'Emden'; } catch { }
   const f = dialog(`
     <h3>Laden hinzufügen</h3>
     <div class="two wide-first">
-      <label>Welcher Laden?<input name="q" placeholder="z. B. Müller, Bäckerei, Fressnapf" autocomplete="off" enterkeyhint="search"></label>
+      <label>Welcher Laden?<input name="q" value="${esc(preset)}" placeholder="z. B. Müller, Bäckerei, Fressnapf" autocomplete="off" enterkeyhint="search"></label>
       <label>Ort<input name="ort" value="${esc(lastOrt)}" autocomplete="off"></label>
     </div>
     <button type="button" class="btn primary" data-s="go">${ICON.pin} Suchen</button>
@@ -784,6 +785,24 @@ function findStore() {
     toast(`★ ${s.name} hinzugefügt`);
   });
   setTimeout(() => q.focus(), 50);
+  if (preset) search();
+}
+
+// Mehrere öffentliche Overpass-Server: ist einer überlastet (502/504/429), den nächsten versuchen
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+async function overpass(q, onTry) {
+  let last;
+  for (let i = 0; i < OVERPASS.length; i++) {
+    onTry?.(i + 1);
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 45000);
+      const r = await fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctl.signal });
+      clearTimeout(t);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } catch (e) { last = e.name === 'AbortError' ? new Error('Zeitüberschreitung') : e; }
+  }
+  throw last;
 }
 
 async function osmSearch() {
@@ -792,9 +811,7 @@ async function osmSearch() {
   const shops = Object.keys(OSM_TYPE).join('|');
   const q = `[out:json][timeout:40];area["name"="Emden"]["boundary"="administrative"]["admin_level"="6"]->.a;nwr["shop"~"^(${shops})$"]["name"](area.a);out center tags;`;
   try {
-    const r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
+    const data = await overpass(q, (n) => { $('p.muted', f).textContent = `Suche in OpenStreetMap … (Server ${n} von ${OVERPASS.length})`; });
     const known = new Set(state.stores.map((s) => (s.name + '|' + (s.address || '')).toLowerCase()));
     const found = data.elements.map((e) => {
       const t = e.tags;
@@ -814,7 +831,7 @@ async function osmSearch() {
       else if (!b.classList.contains('added')) { add(found[+b.dataset.o]); b.classList.add('added'); }
     };
   } catch (err) {
-    $('p.muted', f).textContent = 'Konnte OpenStreetMap nicht erreichen (' + err.message + '). Bitte später nochmal versuchen oder Läden von Hand anlegen.';
+    $('p.muted', f).textContent = 'Die OpenStreetMap-Server sind gerade überlastet (' + err.message + '). Bitte in ein paar Minuten nochmal versuchen – oder einzelne Läden über „＋ Laden“ suchen.';
     $('.osm', f).innerHTML = '';
   }
 }
@@ -907,6 +924,7 @@ document.addEventListener('click', async (e) => {
     case 'set-me': state.me = id; save(); render(); toast(`Hallo ${member(id).name}!`); break;
     case 'fav': st.fav = !st.fav; save(); render(); toast(st.fav ? `★ ${st.name} ist jetzt Lieblingsladen` : `${st.name} ist kein Favorit mehr`); break;
     case 'new-store': findStore(); break;
+    case 'find-online': { const t = ui.storeQuery; ui.storeQuery = ''; render(); findStore(t); break; }
     case 'edit-store': editStore(store(id)); break;
     case 'osm': osmSearch(); break;
     case 'new-member': editMember(); break;

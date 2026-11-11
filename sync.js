@@ -22,7 +22,7 @@ const Sync = (() => {
   const clean = (o) => JSON.parse(JSON.stringify(o));
   const ordered = (col) => col !== 'items';
   const docOf = (col, obj, i) => { const d = clean(obj); if (ordered(col)) d._o = i; return d; };
-  const config = () => window.SYNC_CONFIG || cfg.config;
+  const config = () => cfg.config || window.SYNC_CONFIG;
   const provider = (c = config()) => (c && (c.provider || (c.url && c.key ? 'supabase' : 'firebase'))) || null;
   const fmtCode = (h) => (h || '').toUpperCase().match(/.{1,4}/g)?.join('-') || '';
   const newCode = () => { const a = 'abcdefghjkmnpqrstuvwxyz23456789', r = crypto.getRandomValues(new Uint8Array(24)); return [...r].map((x) => a[x % a.length]).join(''); };
@@ -40,8 +40,9 @@ const Sync = (() => {
   function parseConfig(text) {
     text = String(text);
     const url = text.match(/https:\/\/[a-z0-9-]+\.supabase\.(co|in)/i);
-    if (url || /supabase/i.test(text)) {
+    if (url || /supabase|sb_publishable_|^\s*eyJ/i.test(text)) {
       const key = text.match(/eyJ[\w-]+\.[\w-]+\.[\w-]+|sb_publishable_[\w-]+/);
+      if (!url && key && window.SYNC_CONFIG?.url) return { provider: 'supabase', url: window.SYNC_CONFIG.url, key: key[0] };
       if (!url) throw new Error('Project URL (https://….supabase.co) fehlt');
       if (!key) throw new Error('anon/publishable Key fehlt');
       return { provider: 'supabase', url: url[0], key: key[0] };
@@ -305,6 +306,7 @@ const Sync = (() => {
     get fmtCode() { return fmtCode(cfg.hid); },
     get hasConfig() { return !!config(); },
     get configFromFile() { return !!window.SYNC_CONFIG; },
+    get hasOwnConfig() { return !!cfg.config; },
     push,
     parseConfig,
     async init() {
@@ -324,7 +326,7 @@ const Sync = (() => {
     inviteLink() {
       const u = new URL(location.href); u.hash = '';
       let h = 'join=' + cfg.hid;
-      if (!window.SYNC_CONFIG && cfg.config) h += '&cfg=' + btoa(unescape(encodeURIComponent(JSON.stringify(cfg.config)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); // URL-sicher (base64url)
+      if (cfg.config) h += '&cfg=' + btoa(unescape(encodeURIComponent(JSON.stringify(cfg.config)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); // URL-sicher (base64url)
       return u.toString() + '#' + h;
     },
     async disconnect(forgetConfig = false) {

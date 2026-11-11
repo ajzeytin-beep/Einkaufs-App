@@ -21,7 +21,7 @@ const DB = (() => {
   return { get: (k) => tx('readonly', (s) => s.get(k)), set: (k, v) => tx('readwrite', (s) => s.put(v, k)) };
 })();
 
-const APP_VERSION = 15; // bei jeder Änderung zusammen mit sw.js hochzählen
+const APP_VERSION = 17; // bei jeder Änderung zusammen mit sw.js hochzählen
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -521,9 +521,7 @@ function syncSection() {
       <button class="btn primary" data-act="sync-create">Gemeinsamen Haushalt starten</button>
     </div>
     ${joinBlock('Oder: Einladung eines anderen Handys annehmen')}
-    <div class="card pad stack" style="margin-top:12px">
-      ${Sync.configFromFile ? '' : '<button class="link" data-act="sync-forget">Zugangsdaten entfernen</button>'}
-    </div>`;
+    ${Sync.hasOwnConfig ? '<p class="small"><button class="link" data-act="sync-forget">Eingefügte Zugangsdaten entfernen</button></p>' : ''}`;
   return `<div class="card pad stack">
       ${syncPill()}
       ${Sync.status === 'error' ? `<p class="err">${esc(Sync.error)}</p>` : ''}

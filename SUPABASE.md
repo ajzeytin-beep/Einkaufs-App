@@ -21,6 +21,10 @@ Der kostenlose Tarif reicht für eine Familie bei Weitem, eine Kreditkarte ist n
    - ⚠️ **Nicht** den `service_role`/`secret` Key verwenden!
 
 ## 4. In der App eintragen
+
+> **Bei dieser App bereits erledigt:** Project URL und Publishable Key sind in `sync-config.js` fest eingetragen –
+> in der App einfach **Mehr → „Gemeinsamen Haushalt starten“** und die Einladung teilen.
+
 **Variante A (am einfachsten):** In der App **Mehr → Gemeinsam nutzen** → URL und Key einfügen (beides zusammen in
 das Feld, z. B. untereinander) → „Konfiguration speichern“ → **„Gemeinsamen Haushalt starten“** →
 **„Einladung teilen“** und den Link an deine Frau schicken. Sie öffnet ihn, bestätigt und wählt „Wer bist du?“ – fertig.

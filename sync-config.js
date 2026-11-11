@@ -8,4 +8,4 @@
 //
 // Firebase (Anleitung: FIREBASE.md):
 // window.SYNC_CONFIG = { provider: "firebase", apiKey: "AIza...", authDomain: "...", projectId: "...", appId: "..." };
-window.SYNC_CONFIG = null;
+window.SYNC_CONFIG = { provider: "supabase", url: "https://ennglvjrgngzhlxgdoac.supabase.co", key: "sb_publishable_PxSmCndOKpbOyLoTLYLoLQ_xegipxZq" };

@@ -1,20 +1,26 @@
-# Einkaufsliste 🛒
+# Einkauf 🛒
 
-Eine kleine Einkaufslisten-App (Web-App, läuft im Handy-Browser und lässt sich auf den Homescreen legen).
+Gemeinsame Einkaufs-App als Web-App (läuft im Handy-Browser, lässt sich auf den Homescreen legen, funktioniert offline).
+Design: warmes Beige/Braun, hell und dunkel.
 
-## Funktionen
-- **Schnell eintragen:** „Tomaten“, „2 Dosen Mais“, „Käse - der milde Gouda“ (alles nach ` - ` wird zur Notiz).
-- **Automatisch sortiert** nach Abteilung, in der Reihenfolge eures Laufwegs durch den Laden.
-- **Fotos** für spezielle Produkte (📷-Knopf, direkt mit der Kamera). Antippen vergrößert das Bild.
-- **Lernt mit:** Wenn ihr einen Artikel in eine andere Abteilung verschiebt (⋯ → Abteilung), merkt sich die App das fürs nächste Mal.
-- **Laufweg:** Unter „Laufweg“ die Abteilungen per ▲/▼ in die echte Reihenfolge im Edeka Südbahnhof bringen, umbenennen, löschen oder neue anlegen.
-- Funktioniert auch offline (z. B. bei schlechtem Empfang im Laden).
+## Bereiche
+- **Übersicht (Dashboard):** offene Artikel, im Wagen, Fortschritt; „Wer kauft was“ pro Person; „Wo einkaufen“ pro Laden; zuletzt hinzugefügt.
+- **Liste:** nach Laden gruppiert und innerhalb des Ladens nach dessen **Laufweg** (Eingang → Kasse) sortiert.
+  Filter nach Laden und Person. Antippen = abhaken. Antippen des Personen-Kreises = wechselt, wer es kauft.
+- **Läden:** Startliste mit Supermärkten, Discountern und Drogerien in Emden. Suchen, Favoriten (★), anlegen, bearbeiten, löschen.
+  „Läden in Emden suchen“ lädt weitere Geschäfte live aus OpenStreetMap (Baumarkt, Mode, Bäcker, Elektronik …).
+  Jeder Laden hat seinen eigenen Laufweg (⋯ → Reihenfolge der Abteilungen mit ▲/▼).
+- **Personen:** hinzufügen, umbenennen, Farbe wählen, entfernen. „Das bin ich“ pro Gerät einstellen.
+- **Mehr:** Abteilungen anlegen/umbenennen/löschen, Sicherung herunterladen/einspielen, alles zurücksetzen.
+
+## Eintragen
+„Tomaten“, „2 Dosen Mais“, „Käse - der milde Gouda“ (Text nach ` - ` wird Notiz). Die Abteilung wird automatisch erkannt;
+Korrekturen merkt sich die App. 📷 fügt einen Artikel mit Foto hinzu.
 
 ## Starten
-Lokal: `python3 -m http.server` im Ordner ausführen und `http://localhost:8000` öffnen.
-
-Fürs Handy z. B. über **GitHub Pages** veröffentlichen (Settings → Pages → Branch wählen), dann die Seite öffnen und
-„Zum Home-Bildschirm hinzufügen“.
+Lokal: `python3 -m http.server` und `http://localhost:8000` öffnen. Fürs Handy z. B. über GitHub Pages veröffentlichen
+und „Zum Home-Bildschirm“ hinzufügen.
 
 ## Hinweis
-Die Daten liegen aktuell **auf dem jeweiligen Gerät**. Ein gemeinsamer Abgleich zwischen zwei Handys ist der nächste Schritt.
+Die Daten liegen derzeit auf dem jeweiligen Gerät. Der gemeinsame Abgleich zwischen mehreren Handys ist der nächste Schritt.
+Die Ladenadressen stammen aus öffentlichen Verzeichnissen und OpenStreetMap und können veraltet sein.
